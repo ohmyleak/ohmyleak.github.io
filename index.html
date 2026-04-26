@@ -4,39 +4,51 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Purpl3L3an</title>
-<style>
-    body {
-        background-color: #1a1a2e;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh; /* Usa min-height così non sballa */
-        margin: 0;
-        font-family: sans-serif;
-    }
-
-    .player-card {
-        background: linear-gradient(145deg, #570a88, #2e0249);
-        padding: 25px;
-        border-radius: 30px;
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
-        text-align: center;
-        width: 320px; /* Larghezza fissa del player */
-        color: white;
-    }
-
-    .album-art {
-        width: 250px;  /* Larghezza fissa della copertina */
-        height: 250px; /* Altezza fissa della copertina */
-        margin: 0 auto 20px;
-        border-radius: 15px;
-        overflow: hidden; /* Fondamentale: taglia l'immagine che esce fuori */
-        box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-        background-color: #444; /* Colore di recupero se l'immagine non carica */
-    }
-
-    .album-art img {
-        width: 100%;
+    <style>
+        body {
+            background-color: #1a1a2e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Usa min-height così non sballa */
+            margin: 0;
+            font-family: sans-serif;
+        }
+    
+        .player-card {
+            background: linear-gradient(145deg, #570a88, #2e0249);
+            padding: 25px;
+            border-radius: 30px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            width: 320px; /* Larghezza fissa del player */
+            color: white;
+        }
+    
+        .album-art {
+            width: 250px;  /* Larghezza fissa della copertina */
+            height: 250px; /* Altezza fissa della copertina */
+            margin: 0 auto 20px;
+            border-radius: 15px;
+            overflow: hidden; /* Fondamentale: taglia l'immagine che esce fuori */
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            background-color: #444; /* Colore di recupero se l'immagine non carica */
+        }
+    
+        .album-art img {
+            width: 100%;    /* Forza l'immagine a essere larga quanto il contenitore */
+            height: 100%;   /* Forza l'immagine a essere alta quanto il contenitore */
+            object-fit: cover; /* Taglia i bordi in eccesso senza schiacciare la foto */
+        }
+    
+        h2 { margin: 10px 0 5px; font-size: 1.2rem; }
+        p { margin: 0 0 20px; font-size: 0.9rem; opacity: 0.7; }
+    
+        audio {
+            width: 100%;
+            filter: hue-rotate(45deg); /* Un trucchetto per virare i controlli verso il viola */
+        }
+    </style>
 </head>
 <body>
 
