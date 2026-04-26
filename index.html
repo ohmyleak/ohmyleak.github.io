@@ -1,81 +1,149 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<!-- Meta Tags -->
-	<meta charset="UTF-8">
-	<meta name="description" content="Purpl3L3an">
-	<meta name="keywords" content="Purpl3L3an">
-	<meta name="author" content="Kevin">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<!-- CSS Links -->
-	<link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" />
-	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
-	<link rel="stylesheet" href="css/style.css">
-	<link rel="stylesheet" href="fontaw/css/font-awesome.min.css">
-	<link rel="icon" type="image/png" href="/img/favicon.png">
+    <meta charset="UTF-8">
+    <meta name="description" content="Purpl3L3an">
+    <meta name="keywords" content="Purpl3L3an">
+    <meta name="author" content="Kevin">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+    <title>Purpl3L3an</title>
 
-	<title>Purpl3L3an</title>
+    <style>
+        /* BACKGROUND ANIMATO VIOLA */
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100vh;
+            /* Gradiente a 4 colori stile Deep Purple */
+            background: linear-gradient(-45deg, #2e0249, #570a88, #6227eb, #a91079);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+        }
+
+        /* Animazione del movimento del gradiente */
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Regolazioni per far risaltare le card sul viola */
+        #main-area {
+            padding-top: 50px;
+            padding-bottom: 50px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.1); /* Effetto vetro */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .card-body {
+            color: white;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .search-box input {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 25px !important;
+            color: white !important;
+        }
+
+        .search-box input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        #searchPrepend {
+            color: white;
+            margin-left: -35px;
+            z-index: 10;
+            line-height: 38px;
+        }
+
+        /* Preloader fix */
+        #preloader {
+            background: #2e0249;
+        }
+    </style>
 </head>
 <body onload="preloader()">
-	<div id="preloader">
-		<div class="loader"></div>
-			<div></div>
-			<div></div>
-		</div>
-	</div>
-	<div class="container" id="wrapper">
-		<div class="row">
-			<div class="col-md-9">
-				<div id="main-area">
-					<div class="header-section">
-						<div class="input-group col-md-6 offset-md-3 search-box">				        
-					        <input type="text" class="form-control" id="search" placeholder="Search" required autocomplete="off">
-					        <div class="input-group-prepend">
-					        	<i class="fal fa-search" id="searchPrepend"></i>
-					        </div>
-					        <div class="invalid-tooltip">Please choose a unique and valid username.</div>
-					    </div>
-					</div> <!--Header Section End -->
-					<div class="content-section">
-						<div class="section-heading">
-						</div>						
-						<div class="row">
-							<div class="col-md-4">
-								<div class="card" style="width: 100%;">
-									<a href="Dazero.html">
-										<img class="card-img-top" src="img/Nayt.webp" alt="Card image cap">
-									</a>
-									<div class="card-body">
-										<p class="card-text text-truncate">Da zero</p>
-								  	</div>
-								</div>
-							</div>
-								<div class="col-md-4">
-								<div class="card" style="width: 100%;">
-									<a href="!ly.html">
-										<img class="card-img-top" src="img/!ly.webp" alt="Card image cap">
-									</a>
-									<div class="card-body">
-										<p class="card-text text-truncate">!ly</p>
-								  	</div>
-								</div>
-							</div>
-						</div>
-					</div> <!-- Content Section End -->
-					<div class="footer">
-						<div class="row">													
-							<div class="col-lg-4 col-md-12 order-lg-2"></div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>	
+    <div id="preloader">
+        <div class="loader"></div>
+    </div>
 
-	<!-- JS Script Files -->
-	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
-	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
-	<script type="text/javascript" src="js/custom-function.js"></script>
+    <div class="container" id="wrapper">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div id="main-area">
+                    <div class="header-section mb-5">
+                        <div class="input-group col-md-6 offset-md-3 search-box">                       
+                            <input type="text" class="form-control" id="search" placeholder="Search music..." required autocomplete="off">
+                            <div class="input-group-prepend">
+                                <i class="fal fa-search" id="searchPrepend"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <a href="Dazero.html">
+                                        <img class="card-img-top" src="https://casadeldiscofaenza.it/wp-content/uploads/2025/01/71SP04tsQlL._UF10001000_QL80_.jpg" alt="Nayt">
+                                    </a>
+                                    <div class="card-body">
+                                        <p class="card-text text-truncate">Da zero</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <a href="!ly.html">
+                                        <img class="card-img-top" src="img/!ly.webp" alt="!ly">
+                                    </a>
+                                    <div class="card-body">
+                                        <p class="card-text text-truncate">!ly</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div> 
+
+                    <div class="footer text-center mt-5">
+                        <p style="opacity: 0.5; font-size: 0.8rem;">Purpl3L3an - JustForMia</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>  
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"></script>
+    <script>
+        function preloader() {
+            // Semplice funzione per nascondere il loader se custom-function.js manca
+            setTimeout(() => {
+                document.getElementById('preloader').style.display = 'none';
+            }, 500);
+        }
+    </script>
 </body>
 </html>
