@@ -242,10 +242,10 @@
             let nextIndex = currentIndex + 1;
             localStorage.setItem('queueIndex', nextIndex);
             localStorage.setItem('autoplayNext', 'true');
-            window.location.href = queue[nextIndex].url;
+            window.location.href = "../" + queue[nextIndex].url; 
         } else {
             localStorage.removeItem('autoplayNext');
-            window.location.href = "index.html"; 
+            window.location.href = "../index.html"; 
         }
     };
 });
