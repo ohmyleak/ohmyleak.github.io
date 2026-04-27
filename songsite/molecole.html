@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>!ly</title>
+    <title>molecole</title>
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" />
     <style>
         body {
             background-color: #6227eb;
@@ -36,112 +37,49 @@
             border: 2px solid #be2edd;
         }
     
-        .album-art img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
+        .album-art img { width: 100%; height: 100%; object-fit: cover; }
     
         h2 { margin: 10px 0 5px; font-size: 1.5rem; letter-spacing: 1px; }
         p { margin: 0 0 25px; font-size: 1rem; opacity: 0.8; color: #d099ff; }
 
-        .custom-player {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-        }
+        .custom-player { display: flex; flex-direction: column; align-items: center; gap: 20px; }
 
         #progress-container {
-            width: 100%;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            cursor: pointer;
+            width: 100%; height: 8px; background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px; cursor: pointer;
         }
 
         #progress-bar {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(to right, #be2edd, #ffffff);
-            border-radius: 10px;
-            box-shadow: 0 0 12px #be2edd;
-            transition: width 0.1s linear;
+            width: 0%; height: 100%; background: linear-gradient(to right, #be2edd, #ffffff);
+            border-radius: 10px; box-shadow: 0 0 12px #be2edd; transition: width 0.1s linear;
         }
 
-        /* --- ZONA CONTROLLI BILANCIATA --- */
         .controls-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between; /* Distribuisce gli elementi */
-            width: 100%;
-            margin-top: 5px;
+            display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 5px;
         }
 
-        /* Segnaposto invisibile a sinistra per centrare il play */
-        .spacer {
-            width: 42px; 
-        }
+        .spacer { width: 42px; }
 
         .play-btn {
-            background: #ffffff;
-            border: none;
-            width: 65px;
-            height: 65px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transition: all 0.3s ease;
+            background: #ffffff; border: none; width: 65px; height: 65px;
+            border-radius: 50%; cursor: pointer; display: flex;
+            justify-content: center; align-items: center; transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            margin-left: 10px; /* Piccolo aggiustamento ottico */
         }
 
         .loop-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 10px;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: none; border: none; cursor: pointer; padding: 10px;
+            transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;
         }
 
-        .loop-btn svg {
-            width: 22px;
-            height: 22px;
-            fill: rgba(255, 255, 255, 0.4);
-        }
+        .loop-btn svg { width: 22px; height: 22px; fill: rgba(255, 255, 255, 0.4); }
+        .loop-btn.active svg { fill: #be2edd; filter: drop-shadow(0 0 8px #be2edd); }
 
-        .loop-btn.active svg {
-            fill: #be2edd;
-            filter: drop-shadow(0 0 8px #be2edd);
-        }
+        .play-btn svg { width: 25px; height: 25px; fill: #2e0249; }
+        .play-btn:hover { transform: scale(1.1); background: #be2edd; }
+        .play-btn:hover svg { fill: white; }
 
-        .play-btn svg {
-            width: 25px;
-            height: 25px;
-            fill: #2e0249;
-        }
-
-        .play-btn:hover {
-            transform: scale(1.1);
-            background: #be2edd;
-        }
-
-        .play-btn:hover svg {
-            fill: white;
-        }
-
-        .footer-text {
-            margin-top: 25px;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            opacity: 0.4;
-        }
+        .footer-text { margin-top: 25px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; opacity: 0.4; }
     </style>
 </head>
 <body>
@@ -161,14 +99,11 @@
 
             <div class="controls-row">
                 <div class="spacer"></div>
-
                 <button class="play-btn" id="playBtn">
                     <svg id="playIcon" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z"/>
-                    </svg>
+                        <path d="M8 5v14l11-7z"/> </svg>
                 </button>
-
-                <button class="loop-btn" id="loopBtn" title="Ripeti">
+                <button class="loop-btn" id="loopBtn">
                     <svg viewBox="0 0 24 24">
                         <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
                     </svg>
@@ -176,9 +111,7 @@
             </div>
         </div>
 
-        <audio id="mainAudio">
-            <source src="../music/molecole.mp3" type="audio/mpeg">
-        </audio>
+        <audio id="mainAudio" src="../music/molecole.mp3"></audio>
 
         <div class="footer-text">JustForMia</div>
     </div>
@@ -194,62 +127,22 @@
         const playPath = "M8 5v14l11-7z";
         const pausePath = "M6 19h4V5H6v14zm8-14v14h4V5h-4z";
 
-        const audioPlayer = document.querySelector('audio'); 
-
-        audioPlayer.onended = function() {
-            // Recupera la coda e l'indice attuale
-            let queue = JSON.parse(localStorage.getItem('currentQueue'));
-            let currentIndex = parseInt(localStorage.getItem('queueIndex'));
-
-            if (queue && currentIndex < queue.length - 1) {
-                // C'è un'altra canzone? Vai alla prossima
-                let nextIndex = currentIndex + 1;
-                localStorage.setItem('queueIndex', nextIndex);
-                window.location.href = queue[nextIndex].url;
-            } else {
-                // Fine della playlist: torna alla home o ricomincia
-                alert("Playlist terminata");
-                window.location.href = "index.html"; // Cambia con il nome della tua home
+        // 1. GESTIONE AUTOPLAY ALL'AVVIO
+        window.addEventListener('load', () => {
+            if (localStorage.getItem('autoplayNext') === 'true') {
+                audio.play().then(() => {
+                    playIcon.querySelector('path').setAttribute('d', pausePath);
+                }).catch(() => {
+                    console.log("In attesa di interazione...");
+                    document.addEventListener('click', () => {
+                        audio.play();
+                        playIcon.querySelector('path').setAttribute('d', pausePath);
+                    }, { once: true });
+                });
             }
-        };
-    document.addEventListener("DOMContentLoaded", function() {
-    const audioPlayer = document.querySelector('audio');
+        });
 
-    // Funzione per forzare il play
-    const forcePlay = () => {
-        if (localStorage.getItem('autoplayNext') === 'true') {
-            audioPlayer.play().then(() => {
-                console.log("Riproduzione avviata con successo");
-            }).catch(error => {
-                // Se ancora fallisce, usiamo un trucco: al primo tocco ovunque, parte l'audio
-                console.log("Autoplay bloccato. In attesa di un tocco dell'utente.");
-                document.addEventListener('click', () => {
-                    audioPlayer.play();
-                }, { once: true });
-            });
-        }
-    };
-
-    // Aspettiamo che l'audio sia pronto per minimizzare i blocchi
-    audioPlayer.addEventListener('canplaythrough', forcePlay, { once: true });
-
-    // Gestione fine canzone per la prossima
-    audioPlayer.onended = function() {
-        let queue = JSON.parse(localStorage.getItem('currentQueue'));
-        let currentIndex = parseInt(localStorage.getItem('queueIndex'));
-
-        if (queue && currentIndex < queue.length - 1) {
-            let nextIndex = currentIndex + 1;
-            localStorage.setItem('queueIndex', nextIndex);
-            localStorage.setItem('autoplayNext', 'true');
-            window.location.href = queue[nextIndex].url;
-        } else {
-            localStorage.removeItem('autoplayNext');
-            window.location.href = "index.html"; 
-        }
-    };
-});
-
+        // 2. CONTROLLI PLAY/PAUSE
         playBtn.addEventListener('click', () => {
             if (audio.paused) {
                 audio.play();
@@ -260,32 +153,42 @@
             }
         });
 
+        // 3. LOOP
         loopBtn.addEventListener('click', () => {
             audio.loop = !audio.loop;
             loopBtn.classList.toggle('active');
         });
 
+        // 4. PROGRESS BAR
         audio.addEventListener('timeupdate', () => {
-            if (audio.duration) {
-                const percent = (audio.currentTime / audio.duration) * 100;
-                progressBar.style.width = percent + '%';
-            }
+            const percent = (audio.currentTime / audio.duration) * 100;
+            progressBar.style.width = percent + '%';
         });
 
         progressContainer.addEventListener('click', (e) => {
             const width = progressContainer.clientWidth;
             const clickX = e.offsetX;
-            const duration = audio.duration;
-            audio.currentTime = (clickX / width) * duration;
+            audio.currentTime = (clickX / width) * audio.duration;
         });
 
+        // 5. FINE CANZONE (LOGICA PLAYLIST)
         audio.addEventListener('ended', () => {
-            if(!audio.loop) {
-                playIcon.querySelector('path').setAttribute('d', playPath);
-                progressBar.style.width = '0%';
+            if (audio.loop) return; // Se c'è il loop, non fare nulla (ricomincia da sola)
+
+            let queue = JSON.parse(localStorage.getItem('currentQueue'));
+            let currentIndex = parseInt(localStorage.getItem('queueIndex'));
+
+            if (queue && currentIndex < queue.length - 1) {
+                let nextIndex = currentIndex + 1;
+                localStorage.setItem('queueIndex', nextIndex);
+                localStorage.setItem('autoplayNext', 'true');
+                // Torniamo alla root per poi entrare nella cartella corretta
+                window.location.href = "../" + queue[nextIndex].url; 
+            } else {
+                localStorage.removeItem('autoplayNext');
+                window.location.href = "../index.html"; 
             }
         });
     </script>
-
 </body>
 </html>
