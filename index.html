@@ -20,11 +20,10 @@
             color: var(--text-main);
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
-            padding-bottom: 90px; /* Spazio per la nav bar */
+            padding-bottom: 90px;
             overflow-x: hidden;
         }
 
-        /* Gradient di sfondo morbido in alto stile YT Music */
         body::before {
             content: "";
             position: fixed;
@@ -37,7 +36,6 @@
             opacity: 0.6;
         }
 
-        /* Header */
         header {
             padding: 20px;
             display: flex;
@@ -51,7 +49,7 @@
             padding: 10px 20px;
             display: flex;
             align-items: center;
-            margin: 10px 20px;
+            margin: 10px 20px 30px;
         }
 
         .search-container input {
@@ -63,15 +61,6 @@
             width: 100%;
         }
 
-        /* Sezioni */
-        .section-title {
-            padding: 0 20px;
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin: 20px 0 15px;
-        }
-
-        /* Grid delle Card (stile Spotify) */
         .music-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -83,14 +72,19 @@
             background: var(--surface-dark);
             padding: 12px;
             border-radius: 12px;
-            transition: background 0.3s;
+            transition: transform 0.2s, opacity 0.3s;
             text-decoration: none;
             color: white;
+            display: block;
+        }
+
+        .hidden {
+            display: none;
         }
 
         .music-card:active {
             background: #282828;
-            transform: scale(0.98);
+            transform: scale(0.95);
         }
 
         .music-card img {
@@ -101,7 +95,7 @@
             box-shadow: 0 8px 15px rgba(0,0,0,0.3);
         }
 
-        .music-card p {
+        .song-title {
             margin: 10px 0 0;
             font-size: 0.9rem;
             font-weight: 600;
@@ -110,7 +104,12 @@
             text-overflow: ellipsis;
         }
 
-        /* Bottom Navigation Bar (Stile App) */
+        .artist-name {
+            font-size: 0.7rem; 
+            color: var(--text-dim);
+        }
+
+        /* Navigazione Bottom a 2 icone */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -132,18 +131,12 @@
             color: var(--text-dim);
             text-decoration: none;
             font-size: 0.7rem;
+            flex: 1;
         }
 
-        .nav-item i {
-            font-size: 1.4rem;
-            margin-bottom: 4px;
-        }
+        .nav-item i { font-size: 1.4rem; margin-bottom: 4px; }
+        .nav-item.active { color: var(--primary-purple); }
 
-        .nav-item.active {
-            color: var(--primary-purple);
-        }
-
-        /* Animazione loader */
         #preloader {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -155,8 +148,7 @@
         }
 
         .loader {
-            width: 40px;
-            height: 40px;
+            width: 40px; height: 40px;
             border: 3px solid var(--primary-purple);
             border-top-color: transparent;
             border-radius: 50%;
@@ -164,7 +156,6 @@
         }
 
         @keyframes spin { to { transform: rotate(360deg); } }
-
     </style>
 </head>
 <body onload="hideLoader()">
@@ -180,43 +171,31 @@
 
     <div class="search-container">
         <i class="fal fa-search" style="color: var(--text-dim);"></i>
-        <input type="text" placeholder="Cerca nella tua musica">
+        <input type="text" id="searchInput" placeholder="Cerca tra le tue canzoni">
     </div>
 
-    <div class="section-title">I tuoi brani</div>
-
-    <div class="music-grid">
+    <div class="music-grid" id="musicGrid">
         <a href="Dazero.html" class="music-card">
-            <img src="https://casadeldiscofaenza.it/wp-content/uploads/2025/01/71SP04tsQlL._UF10001000_QL80_.jpg" alt="Nayt">
-            <p>Da zero</p>
-            <span style="font-size: 0.7rem; color: var(--text-dim);">Nayt</span>
+            <img src="img/Nayt.webp" alt="Nayt">
+            <p class="song-title">Da zero</p>
+            <span class="artist-name">Nayt</span>
         </a>
 
         <a href="!ly.html" class="music-card">
-            <img src="https://casadeldiscofaenza.it/wp-content/uploads/2025/01/71SP04tsQlL._UF10001000_QL80_.jpg" style="filter: hue-rotate(90deg);" alt="!ly">
-            <p>!ly</p>
-            <span style="font-size: 0.7rem; color: var(--text-dim);">Thasup</span>
+            <img src="img/!ly.webp" alt="!ly">
+            <p class="song-title">!ly</p>
+            <span class="artist-name">Thasup</span>
         </a>
     </div>
 
-    <div class="section-title">Scelte per te</div>
-    
     <nav class="bottom-nav">
         <a href="#" class="nav-item active">
             <i class="fas fa-home"></i>
             <span>Home</span>
         </a>
         <a href="#" class="nav-item">
-            <i class="fal fa-search"></i>
-            <span>Cerca</span>
-        </a>
-        <a href="#" class="nav-item">
             <i class="fal fa-books"></i>
             <span>Libreria</span>
-        </a>
-        <a href="#" class="nav-item">
-            <i class="fab fa-itunes-note" style="color: var(--primary-purple);"></i>
-            <span>Premium</span>
         </a>
     </nav>
 
@@ -226,6 +205,22 @@
                 document.getElementById('preloader').style.display = 'none';
             }, 600);
         }
+
+        const searchInput = document.getElementById('searchInput');
+        const musicCards = document.querySelectorAll('.music-card');
+
+        searchInput.addEventListener('input', (e) => {
+            const filter = e.target.value.toLowerCase();
+            musicCards.forEach(card => {
+                const title = card.querySelector('.song-title').innerText.toLowerCase();
+                const artist = card.querySelector('.artist-name').innerText.toLowerCase();
+                if (title.includes(filter) || artist.includes(filter)) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+        });
     </script>
 </body>
 </html>
