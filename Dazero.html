@@ -194,6 +194,68 @@
         const playPath = "M8 5v14l11-7z";
         const pausePath = "M6 19h4V5H6v14zm8-14v14h4V5h-4z";
 
+
+    // Seleziona il tuo elemento audio (assicurati che l'id sia 'myAudio' o cambialo qui)
+        const audioPlayer = document.querySelector('audio'); 
+
+        audioPlayer.onended = function() {
+            // Recupera la coda e l'indice attuale
+            let queue = JSON.parse(localStorage.getItem('currentQueue'));
+            let currentIndex = parseInt(localStorage.getItem('queueIndex'));
+
+            if (queue && currentIndex < queue.length - 1) {
+                // C'è un'altra canzone? Vai alla prossima
+                let nextIndex = currentIndex + 1;
+                localStorage.setItem('queueIndex', nextIndex);
+                window.location.href = queue[nextIndex].url;
+            } else {
+                // Fine della playlist: torna alla home o ricomincia
+                alert("Playlist terminata");
+                window.location.href = "index.html"; // Cambia con il nome della tua home
+            }
+        };
+
+        
+    document.addEventListener("DOMContentLoaded", function() {
+    const audioPlayer = document.querySelector('audio');
+
+    // Funzione per forzare il play
+    const forcePlay = () => {
+        if (localStorage.getItem('autoplayNext') === 'true') {
+            audioPlayer.play().then(() => {
+                console.log("Riproduzione avviata con successo");
+            }).catch(error => {
+                // Se ancora fallisce, usiamo un trucco: al primo tocco ovunque, parte l'audio
+                console.log("Autoplay bloccato. In attesa di un tocco dell'utente.");
+                document.addEventListener('click', () => {
+                    audioPlayer.play();
+                }, { once: true });
+            });
+        }
+    };
+
+    // Aspettiamo che l'audio sia pronto per minimizzare i blocchi
+    audioPlayer.addEventListener('canplaythrough', forcePlay, { once: true });
+
+    // Gestione fine canzone per la prossima
+    audioPlayer.onended = function() {
+        let queue = JSON.parse(localStorage.getItem('currentQueue'));
+        let currentIndex = parseInt(localStorage.getItem('queueIndex'));
+
+        if (queue && currentIndex < queue.length - 1) {
+            let nextIndex = currentIndex + 1;
+            localStorage.setItem('queueIndex', nextIndex);
+            localStorage.setItem('autoplayNext', 'true');
+            window.location.href = queue[nextIndex].url;
+        } else {
+            localStorage.removeItem('autoplayNext');
+            window.location.href = "index.html"; 
+        }
+    };
+});
+
+
+
         playBtn.addEventListener('click', () => {
             if (audio.paused) {
                 audio.play();
