@@ -3,145 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Da zero</title>
+    <title>Da zero - Purpl3L3an</title>
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" />
     <style>
+        :root {
+            --bg-dark: #0a0a0c;
+            --card-bg: #121217;
+            --primary-violet: #8b5cf6;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+        }
+
         body {
-            background-color: #6227eb;
+            background-color: var(--bg-dark);
+            background: radial-gradient(circle at top, #1e1033 0%, var(--bg-dark) 100%);
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            font-family: 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Inter', -apple-system, sans-serif;
         }
     
         .player-card {
-            background: linear-gradient(145deg, #570a88, #2e0249);
-            padding: 30px;
-            border-radius: 30px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            background: var(--card-bg);
+            padding: 32px;
+            border-radius: 40px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
             text-align: center;
-            width: 320px;
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 340px;
+            color: var(--text-main);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
         }
     
         .album-art {
-            width: 260px;
-            height: 260px;
-            margin: 0 auto 25px;
-            border-radius: 20px;
+            width: 280px;
+            height: 280px;
+            margin: 0 auto 30px;
+            border-radius: 32px;
             overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            border: 2px solid #be2edd;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+            position: relative;
         }
     
-        .album-art img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
+        .album-art img { width: 100%; height: 100%; object-fit: cover; }
     
-        h2 { margin: 10px 0 5px; font-size: 1.5rem; letter-spacing: 1px; }
-        p { margin: 0 0 25px; font-size: 1rem; opacity: 0.8; color: #d099ff; }
+        h2 { margin: 0; font-size: 1.6rem; font-weight: 700; letter-spacing: -0.5px; }
+        p { margin: 8px 0 32px; font-size: 1.1rem; color: var(--text-dim); font-weight: 400; }
 
-        .custom-player {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-        }
+        .custom-player { display: flex; flex-direction: column; align-items: center; gap: 24px; }
 
         #progress-container {
-            width: 100%;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            cursor: pointer;
+            width: 100%; height: 6px; background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px; cursor: pointer;
         }
 
         #progress-bar {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(to right, #be2edd, #ffffff);
-            border-radius: 10px;
-            box-shadow: 0 0 12px #be2edd;
+            width: 0%; height: 100%; 
+            background: var(--primary-violet);
+            border-radius: 20px; 
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.5);
             transition: width 0.1s linear;
         }
 
-        /* --- ZONA CONTROLLI BILANCIATA --- */
         .controls-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between; /* Distribuisce gli elementi */
-            width: 100%;
-            margin-top: 5px;
+            display: flex; align-items: center; justify-content: space-between; width: 100%;
         }
 
-        /* Segnaposto invisibile a sinistra per centrare il play */
-        .spacer {
-            width: 42px; 
+        .action-btn {
+            background: none; border: none; cursor: pointer; color: var(--text-dim);
+            transition: all 0.3s ease; font-size: 1.2rem;
         }
+
+        .action-btn:hover { color: var(--text-main); }
 
         .play-btn {
-            background: #ffffff;
-            border: none;
-            width: 65px;
-            height: 65px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            margin-left: 10px; /* Piccolo aggiustamento ottico */
+            background: var(--text-main); border: none; width: 72px; height: 72px;
+            border-radius: 50%; cursor: pointer; display: flex;
+            justify-content: center; align-items: center; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 25px rgba(139, 92, 246, 0.2);
         }
 
-        .loop-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 10px;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+        .play-btn svg { width: 28px; height: 28px; fill: var(--bg-dark); }
+        .play-btn:hover { transform: scale(1.05); background: var(--primary-violet); }
+        .play-btn:hover svg { fill: white; }
 
-        .loop-btn svg {
-            width: 22px;
-            height: 22px;
-            fill: rgba(255, 255, 255, 0.4);
-        }
+        .loop-btn.active { color: var(--primary-violet); filter: drop-shadow(0 0 8px var(--primary-violet)); }
 
-        .loop-btn.active svg {
-            fill: #be2edd;
-            filter: drop-shadow(0 0 8px #be2edd);
-        }
-
-        .play-btn svg {
-            width: 25px;
-            height: 25px;
-            fill: #2e0249;
-        }
-
-        .play-btn:hover {
-            transform: scale(1.1);
-            background: #be2edd;
-        }
-
-        .play-btn:hover svg {
-            fill: white;
-        }
-
-        .footer-text {
-            margin-top: 25px;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            opacity: 0.4;
-        }
+        .footer-text { margin-top: 35px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 3px; color: var(--text-dim); opacity: 0.3; }
     </style>
 </head>
 <body>
@@ -152,7 +102,7 @@
         </div>
         
         <h2>Da zero</h2>
-        <p>Nayt / DOOM</p>
+        <p>Nayt • DOOM</p>
 
         <div class="custom-player">
             <div id="progress-container">
@@ -160,27 +110,23 @@
             </div>
 
             <div class="controls-row">
-                <div class="spacer"></div>
-
+                <button class="action-btn" onclick="window.location.href='../index.html'"><i class="fas fa-home"></i></button>
+                
                 <button class="play-btn" id="playBtn">
                     <svg id="playIcon" viewBox="0 0 24 24">
                         <path d="M8 5v14l11-7z"/>
                     </svg>
                 </button>
 
-                <button class="loop-btn" id="loopBtn" title="Ripeti">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
-                    </svg>
+                <button class="action-btn loop-btn" id="loopBtn">
+                    <i class="fas fa-redo-alt"></i>
                 </button>
             </div>
         </div>
 
-        <audio id="mainAudio">
-            <source src="../music/dazero.mp3" type="audio/mpeg">
-        </audio>
+        <audio id="mainAudio" src="../music/dazero.mp3"></audio>
 
-        <div class="footer-text">JustForMia</div>
+        <div class="footer-text">Purpl3L3an Player</div>
     </div>
 
 <script>
@@ -194,19 +140,17 @@
     const playPath = "M8 5v14l11-7z";
     const pausePath = "M6 19h4V5H6v14zm8-14v14h4V5h-4z";
 
-    // --- FUNZIONE UNICA PER L'ICONA ---
     function updatePlayIcon(isPlaying) {
         const path = isPlaying ? pausePath : playPath;
         playIcon.querySelector('path').setAttribute('d', path);
     }
 
-    // --- 1. GESTIONE AUTOPLAY ---
+    // 1. GESTIONE AUTOPLAY ALL'AVVIO
     window.addEventListener('DOMContentLoaded', () => {
         if (localStorage.getItem('autoplayNext') === 'true') {
             audio.play().then(() => {
-                updatePlayIcon(true); // Icona su "Pausa"
+                updatePlayIcon(true);
             }).catch(() => {
-                // Se bloccato, l'icona resta "Play" (giusto)
                 updatePlayIcon(false);
                 document.addEventListener('click', () => {
                     audio.play();
@@ -216,7 +160,7 @@
         }
     });
 
-    // --- 2. CONTROLLI PLAY/PAUSE ---
+    // 2. CONTROLLI PLAY/PAUSE
     playBtn.addEventListener('click', () => {
         if (audio.paused) {
             audio.play();
@@ -227,13 +171,13 @@
         }
     });
 
-    // --- 3. LOOP ---
+    // 3. LOOP
     loopBtn.addEventListener('click', () => {
         audio.loop = !audio.loop;
         loopBtn.classList.toggle('active');
     });
 
-    // --- 4. PROGRESS BAR ---
+    // 4. PROGRESS BAR
     audio.addEventListener('timeupdate', () => {
         if (audio.duration) {
             const percent = (audio.currentTime / audio.duration) * 100;
@@ -247,11 +191,11 @@
         audio.currentTime = (clickX / width) * audio.duration;
     });
 
-    // --- 5. FINE CANZONE ---
+    // 5. FINE CANZONE (LOGICA PLAYLIST)
     audio.addEventListener('ended', () => {
         if (audio.loop) return;
 
-        updatePlayIcon(false); // Torna icona Play
+        updatePlayIcon(false);
         progressBar.style.width = '0%';
 
         let queue = JSON.parse(localStorage.getItem('currentQueue'));
@@ -268,6 +212,5 @@
         }
     });
 </script>
-
 </body>
 </html>
