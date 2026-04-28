@@ -24,6 +24,18 @@
             margin: 0;
             font-family: 'Inter', -apple-system, sans-serif;
         }
+        * {
+    /* Rimuove il riquadro blu su mobile */
+    -webkit-tap-highlight-color: transparent;
+    
+    /* Impedisce anche il menu contestuale (opzionale) 
+       se tieni premuto troppo a lungo su un'immagine o un tasto */
+    -webkit-touch-callout: none;
+    
+    /* Impedisce la selezione del testo accidentale mentre clicchi velocemente */
+    -webkit-user-select: none;
+    user-select: none;
+}
     
         .player-card {
             background: var(--card-bg);
