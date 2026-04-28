@@ -183,58 +183,77 @@
         <div class="footer-text">JustForMia</div>
     </div>
 
-    <script>
-        const audio = document.getElementById('mainAudio');
-        const playBtn = document.getElementById('playBtn');
-        const loopBtn = document.getElementById('loopBtn');
-        const playIcon = document.getElementById('playIcon');
-        const progressBar = document.getElementById('progress-bar');
-        const progressContainer = document.getElementById('progress-container');
+<script>
+    const audio = document.getElementById('mainAudio');
+    const playBtn = document.getElementById('playBtn');
+    const loopBtn = document.getElementById('loopBtn');
+    const playIcon = document.getElementById('playIcon');
+    const progressBar = document.getElementById('progress-bar');
+    const progressContainer = document.getElementById('progress-container');
 
-        const playPath = "M8 5v14l11-7z";
-        const pausePath = "M6 19h4V5H6v14zm8-14v14h4V5h-4z";
+    const playPath = "M8 5v14l11-7z";
+    const pausePath = "M6 19h4V5H6v14zm8-14v14h4V5h-4z";
 
-        const audioPlayer = document.querySelector('audio'); 
+    // --- FUNZIONE UNICA PER L'ICONA ---
+    function updatePlayIcon(isPlaying) {
+        const path = isPlaying ? pausePath : playPath;
+        playIcon.querySelector('path').setAttribute('d', path);
+    }
 
-        audioPlayer.onended = function() {
-            // Recupera la coda e l'indice attuale
-            let queue = JSON.parse(localStorage.getItem('currentQueue'));
-            let currentIndex = parseInt(localStorage.getItem('queueIndex'));
-
-            if (queue && currentIndex < queue.length - 1) {
-                // C'è un'altra canzone? Vai alla prossima
-                let nextIndex = currentIndex + 1;
-                localStorage.setItem('queueIndex', nextIndex);
-                window.location.href = queue[nextIndex].url;
-            } else {
-                // Fine della playlist: torna alla home o ricomincia
-                alert("Playlist terminata");
-                window.location.href = "index.html"; // Cambia con il nome della tua home
-            }
-        };
-    document.addEventListener("DOMContentLoaded", function() {
-    const audioPlayer = document.querySelector('audio');
-
-    // Funzione per forzare il play
-    const forcePlay = () => {
+    // --- 1. GESTIONE AUTOPLAY ---
+    window.addEventListener('DOMContentLoaded', () => {
         if (localStorage.getItem('autoplayNext') === 'true') {
-            audioPlayer.play().then(() => {
-                console.log("Riproduzione avviata con successo");
-            }).catch(error => {
-                // Se ancora fallisce, usiamo un trucco: al primo tocco ovunque, parte l'audio
-                console.log("Autoplay bloccato. In attesa di un tocco dell'utente.");
+            audio.play().then(() => {
+                updatePlayIcon(true); // Icona su "Pausa"
+            }).catch(() => {
+                // Se bloccato, l'icona resta "Play" (giusto)
+                updatePlayIcon(false);
                 document.addEventListener('click', () => {
-                    audioPlayer.play();
+                    audio.play();
+                    updatePlayIcon(true);
                 }, { once: true });
             });
         }
-    };
+    });
 
-    // Aspettiamo che l'audio sia pronto per minimizzare i blocchi
-    audioPlayer.addEventListener('canplaythrough', forcePlay, { once: true });
+    // --- 2. CONTROLLI PLAY/PAUSE ---
+    playBtn.addEventListener('click', () => {
+        if (audio.paused) {
+            audio.play();
+            updatePlayIcon(true);
+        } else {
+            audio.pause();
+            updatePlayIcon(false);
+        }
+    });
 
-    // Gestione fine canzone per la prossima
-    audioPlayer.onended = function() {
+    // --- 3. LOOP ---
+    loopBtn.addEventListener('click', () => {
+        audio.loop = !audio.loop;
+        loopBtn.classList.toggle('active');
+    });
+
+    // --- 4. PROGRESS BAR ---
+    audio.addEventListener('timeupdate', () => {
+        if (audio.duration) {
+            const percent = (audio.currentTime / audio.duration) * 100;
+            progressBar.style.width = percent + '%';
+        }
+    });
+
+    progressContainer.addEventListener('click', (e) => {
+        const width = progressContainer.clientWidth;
+        const clickX = e.offsetX;
+        audio.currentTime = (clickX / width) * audio.duration;
+    });
+
+    // --- 5. FINE CANZONE ---
+    audio.addEventListener('ended', () => {
+        if (audio.loop) return;
+
+        updatePlayIcon(false); // Torna icona Play
+        progressBar.style.width = '0%';
+
         let queue = JSON.parse(localStorage.getItem('currentQueue'));
         let currentIndex = parseInt(localStorage.getItem('queueIndex'));
 
@@ -247,45 +266,8 @@
             localStorage.removeItem('autoplayNext');
             window.location.href = "../index.html"; 
         }
-    };
-});
-
-        playBtn.addEventListener('click', () => {
-            if (audio.paused) {
-                audio.play();
-                playIcon.querySelector('path').setAttribute('d', pausePath);
-            } else {
-                audio.pause();
-                playIcon.querySelector('path').setAttribute('d', playPath);
-            }
-        });
-
-        loopBtn.addEventListener('click', () => {
-            audio.loop = !audio.loop;
-            loopBtn.classList.toggle('active');
-        });
-
-        audio.addEventListener('timeupdate', () => {
-            if (audio.duration) {
-                const percent = (audio.currentTime / audio.duration) * 100;
-                progressBar.style.width = percent + '%';
-            }
-        });
-
-        progressContainer.addEventListener('click', (e) => {
-            const width = progressContainer.clientWidth;
-            const clickX = e.offsetX;
-            const duration = audio.duration;
-            audio.currentTime = (clickX / width) * duration;
-        });
-
-        audio.addEventListener('ended', () => {
-            if(!audio.loop) {
-                playIcon.querySelector('path').setAttribute('d', playPath);
-                progressBar.style.width = '0%';
-            }
-        });
-    </script>
+    });
+</script>
 
 </body>
 </html>
