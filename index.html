@@ -23,6 +23,18 @@
             padding-bottom: 100px;
             overflow-x: hidden;
         }
+		* {
+    /* Rimuove il riquadro blu su mobile */
+    -webkit-tap-highlight-color: transparent;
+    
+    /* Impedisce anche il menu contestuale (opzionale) 
+       se tieni premuto troppo a lungo su un'immagine o un tasto */
+    -webkit-touch-callout: none;
+    
+    /* Impedisce la selezione del testo accidentale mentre clicchi velocemente */
+    -webkit-user-select: none;
+    user-select: none;
+}
 
         body::before {
             content: "";
@@ -129,7 +141,59 @@
 				<p class="song-title">molecole</p>
 				<span class="artist-name">Thasup</span>
 			</a>
-		</div>		
+		</div>	
+        
+		<div class="music-card">
+			<button class="btn-action" onclick="openPlaylistModal('Lulu', 'Nayt', 'img/unbacio.jpg', 'songsite/lulu.html')">
+				<i class="fal fa-plus"></i>
+			</button>
+			<a href="songsite/lulu.html" style="text-decoration:none; color:inherit;">
+				<img src="img/unbacio.jpeg">
+				<p class="song-title">Lulu</p>
+				<span class="artist-name">Nayt</span>
+			</a>
+		</div>
+		<div class="music-card">
+			<button class="btn-action" onclick="openPlaylistModal('come t! vorre!', 'Thasup', 'img/comet!vorre!.jpg', 'songsite/comet!vorre!.html')">
+				<i class="fal fa-plus"></i>
+			</button>
+			<a href="songsite/comet!vorre!.html" style="text-decoration:none; color:inherit;">
+				<img src="img/comet!vorre!.jpg">
+				<p class="song-title">come t! vorre!</p>
+				<span class="artist-name">Thasup</span>
+			</a>
+		</div>
+		<div class="music-card">
+			<button class="btn-action" onclick="openPlaylistModal('m12ano', 'Thasup', 'img/236451.jpg', 'songsite/m12ano.html')">
+				<i class="fal fa-plus"></i>
+			</button>
+			<a href="songsite/m12ano.html" style="text-decoration:none; color:inherit;">
+				<img src="img/236451.jpeg">
+				<p class="song-title">m12ano</p>
+				<span class="artist-name">Thasup</span>
+			</a>
+		</div>
+		<div class="music-card">
+			<button class="btn-action" onclick="openPlaylistModal('prendimi le mani', 'Thasup', 'img/prendimilemani.jpg', 'songsite/prendimilemani.html')">
+				<i class="fal fa-plus"></i>
+			</button>
+			<a href="songsite/prendimilemani.html" style="text-decoration:none; color:inherit;">
+				<img src="img/prendimilemani.png">
+				<p class="song-title">prendimi le mani</p>
+				<span class="artist-name">Thasup</span>
+			</a>
+		</div>
+		<div class="music-card">
+			<button class="btn-action" onclick="openPlaylistModal('Star Shopping', 'Lil Peep', 'img/StarShopping.jpg', 'songsite/starshopping.html')">
+				<i class="fal fa-plus"></i>
+			</button>
+			<a href="songsite/starshopping.html" style="text-decoration:none; color:inherit;">
+				<img src="img/starshopping.jpg">
+				<p class="song-title">Star Shopping</p>
+				<span class="artist-name">Lil Peep</span>
+			</a>
+		</div>
+    
 	</div>
 
     <div id="librarySection" class="hidden"></div>
