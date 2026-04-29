@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Purpl3L3an</title>
+    <title>Purpl3L3an - Ultimate Pro</title>
     <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" />
     <style>
         :root {
@@ -22,7 +22,7 @@
             background-color: var(--bg-dark);
             color: var(--text-main);
             font-family: 'Inter', sans-serif;
-            margin: 0; padding-bottom: 160px; /* Spazio per miniplayer + nav */
+            margin: 0; padding-bottom: 160px;
             overflow-x: hidden;
         }
 
@@ -35,20 +35,18 @@
         .search-container {
             background: rgba(255, 255, 255, 0.05); border-radius: 15px;
             padding: 12px 18px; display: flex; align-items: center;
-            margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 30px; border: 1px solid rgba(255,255,255,0.05);
         }
         .search-container input { background: none; border: none; color: white; margin-left: 10px; width: 100%; font-size: 1rem; }
 
-        /* --- GRID CANZONI --- */
         .music-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
-        .music-card { background: var(--card-bg); padding: 12px; border-radius: 20px; position: relative; border: 1px solid rgba(255,255,255,0.03); transition: transform 0.2s; }
+        .music-card { background: var(--card-bg); padding: 12px; border-radius: 20px; position: relative; border: 1px solid rgba(255,255,255,0.03); }
         .music-card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 15px; }
         
         .card-btn { position: absolute; top: 18px; right: 18px; width: 30px; height: 30px; border-radius: 50%; border: none; color: white; display: flex; align-items: center; justify-content: center; z-index: 5; cursor: pointer; }
         .add-btn { background: var(--primary-purple); }
         .remove-btn { background: rgba(255, 71, 87, 0.8); backdrop-filter: blur(4px); }
 
-        /* --- MINI PLAYER --- */
         #mini-player {
             position: fixed; bottom: 80px; left: 10px; right: 10px;
             background: rgba(26, 26, 36, 0.95); backdrop-filter: blur(15px);
@@ -60,7 +58,6 @@
         .mini-info img { width: 40px; height: 40px; border-radius: 8px; margin-right: 12px; }
         .mini-text p { margin: 0; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* --- PLAYER FULLSCREEN --- */
         #player-view {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle at top, #1e1033 0%, var(--bg-dark) 100%);
@@ -76,7 +73,6 @@
         .main-btn { background: white; color: black; width: 65px; height: 65px; border-radius: 50%; border: none; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; cursor: pointer; }
         .active-mode { color: var(--primary-purple) !important; }
 
-        /* --- NAV & MODALS --- */
         .bottom-nav { position: fixed; bottom: 0; width: 100%; height: 80px; background: #0a0a0c; display: flex; border-top: 1px solid rgba(255,255,255,0.05); z-index: 500; }
         .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-dim); font-size: 0.75rem; cursor: pointer; }
         .nav-item.active { color: var(--primary-purple); }
@@ -86,25 +82,29 @@
         .overlay.active { opacity: 1; visibility: visible; }
         .hidden { display: none !important; }
         .primary-btn { width: 100%; background: var(--primary-purple); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: bold; margin-bottom: 10px; cursor: pointer; }
+        
+        .stat-item { display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 12px; margin-bottom: 8px; }
+        .stat-rank { font-weight: bold; color: var(--primary-purple); width: 25px; }
 
-        /* --- OTTIMIZZAZIONE PC --- */
+        /* --- FIX PC BUG --- */
         @media (min-width: 768px) {
-            .music-grid {
-                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-                gap: 25px;
+            .music-grid { 
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
+                gap: 30px; 
+                margin-top: 20px; /* Aggiunge spazio extra tra ricerca e canzoni */
             }
-            .music-card { padding: 10px; }
+            .page-view {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 40px;
+            }
+            .search-container {
+                max-width: 800px;
+                margin: 0 auto 40px auto; /* Centra e aggiunge margine sotto */
+            }
             .p-album-art { max-width: 350px; }
-            .p-controls, #progress-container, .search-container {
-                max-width: 600px;
-                margin-left: auto;
-                margin-right: auto;
-            }
-            #mini-player {
-                left: 50%;
-                transform: translateX(-50%);
-                width: 600px;
-            }
+            .p-controls, #progress-container { max-width: 600px; margin: 0 auto; }
+            #mini-player { left: 50%; transform: translateX(-50%); width: 600px; }
         }
     </style>
 </head>
@@ -122,6 +122,7 @@
     <div id="library-page" class="page-view hidden">
         <header><h1>Libreria</h1></header>
         <button class="primary-btn" onclick="openSheet('create')">+ Nuova Playlist</button>
+        <button class="primary-btn" style="background: #2dd4bf;" onclick="openSheet('stats')"><i class="fas fa-chart-line"></i> La tua Top 10</button>
         <div id="playlist-list"></div>
     </div>
 
@@ -170,10 +171,17 @@
 
     <div class="overlay" id="overlay" onclick="closeAllSheets()"></div>
     <div class="bottom-sheet" id="sheet-add"><h3 style="margin-top:0">Aggiungi a...</h3><div id="playlist-options"></div></div>
+    
     <div class="bottom-sheet" id="sheet-create">
         <h3 style="margin-top:0">Crea Playlist</h3>
         <input type="text" id="new-p-name" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--primary-purple); padding:15px; border-radius:12px; color:white; margin-bottom:15px;" placeholder="Nome...">
         <button class="primary-btn" onclick="confirmCreatePlaylist()">Crea</button>
+    </div>
+
+    <div class="bottom-sheet" id="sheet-stats" style="max-height: 80vh; overflow-y: auto;">
+        <h3 style="margin-top:0">Le tue più ascoltate</h3>
+        <div id="stats-container"></div>
+        <button class="primary-btn" style="margin-top:15px" onclick="closeAllSheets()">Chiudi</button>
     </div>
 
     <audio id="audio-engine"></audio>
@@ -201,28 +209,47 @@
         ];
 
         let playlists = JSON.parse(localStorage.getItem('myPlaylists')) || {};
+        let playCounts = JSON.parse(localStorage.getItem('playCounts')) || {};
         let currentOpenP = null, activeQueue = [], currentIndex = 0, isShuffle = false, selectedId = null;
         const audio = document.getElementById('audio-engine');
 
         function init() { renderHome(ALL_SONGS); renderPlaylists(); }
 
-        function renderHome(songs) {
-            document.getElementById('home-grid').innerHTML = songs.map(s => `
-                <div class="music-card" onclick="playSingle(${s.id})">
-                    <button class="card-btn add-btn" onclick="openSheet('add', ${s.id}); event.stopPropagation();"><i class="fas fa-plus"></i></button>
-                    <img src="${s.img}"><p style="margin:10px 0 0; font-weight:bold">${s.title}</p><p style="margin:0; font-size:0.8rem; color:var(--text-dim)">${s.artist}</p>
-                </div>
-            `).join('');
+        function trackPlay(songId) {
+            playCounts[songId] = (playCounts[songId] || 0) + 1;
+            localStorage.setItem('playCounts', JSON.stringify(playCounts));
         }
 
-        function filterHome(q) {
-            const filtered = ALL_SONGS.filter(s => s.title.toLowerCase().includes(q.toLowerCase()) || s.artist.toLowerCase().includes(q.toLowerCase()));
-            renderHome(filtered);
+        function renderStats() {
+            const container = document.getElementById('stats-container');
+            const sorted = Object.entries(playCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+
+            if (sorted.length === 0) {
+                container.innerHTML = "<p style='text-align:center; color:var(--text-dim)'>Nessun dato ancora disponibile. Ascolta qualche canzone!</p>";
+                return;
+            }
+
+            container.innerHTML = sorted.map(([id, count], index) => {
+                const s = ALL_SONGS.find(song => song.id == id);
+                if (!s) return '';
+                return `
+                    <div class="stat-item">
+                        <div class="stat-rank">#${index + 1}</div>
+                        <img src="${s.img}" style="width:40px; height:40px; border-radius:8px;">
+                        <div style="flex:1; overflow:hidden;">
+                            <p style="margin:0; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${s.title}</p>
+                            <p style="margin:0; font-size:0.7rem; color:var(--text-dim)">${count} ascolti</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
-        // --- AUDIO CORE ---
         function startPlayback() {
             const s = activeQueue[currentIndex];
+            trackPlay(s.id); 
             document.getElementById('p-title').innerText = s.title;
             document.getElementById('p-artist').innerText = s.artist;
             document.getElementById('p-img').src = s.img;
@@ -230,7 +257,6 @@
             document.getElementById('m-artist').innerText = s.artist;
             document.getElementById('m-img').src = s.img;
             document.getElementById('mini-player').style.display = 'flex';
-            
             audio.src = s.file; audio.play();
             updateIcons(true);
         }
@@ -262,6 +288,15 @@
 
         function prevSong() { currentIndex = (currentIndex - 1 + activeQueue.length) % activeQueue.length; startPlayback(); }
 
+        function toggleShuffle() { 
+            isShuffle = !isShuffle; 
+            const btn = document.getElementById('shuffle-btn');
+            btn.classList.toggle('active-mode', isShuffle);
+            btn.style.color = isShuffle ? 'var(--primary-purple)' : 'var(--text-dim)';
+        }
+
+        function toggleLoop() { audio.loop = !audio.loop; document.getElementById('loop-btn').classList.toggle('active-mode'); }
+
         audio.ontimeupdate = () => {
             if (!audio.duration) return;
             const p = (audio.currentTime / audio.duration) * 100;
@@ -283,16 +318,20 @@
 
         audio.onended = () => { if (audio.loop) { audio.play(); } else { nextSong(); } };
 
-        function toggleShuffle() { 
-            isShuffle = !isShuffle; 
-            const btn = document.getElementById('shuffle-btn');
-            btn.classList.toggle('active-mode', isShuffle);
-            btn.style.color = isShuffle ? 'var(--primary-purple)' : 'var(--text-dim)';
+        function renderHome(songs) {
+            document.getElementById('home-grid').innerHTML = songs.map(s => `
+                <div class="music-card" onclick="playSingle(${s.id})">
+                    <button class="card-btn add-btn" onclick="openSheet('add', ${s.id}); event.stopPropagation();"><i class="fas fa-plus"></i></button>
+                    <img src="${s.img}"><p style="margin:10px 0 0; font-weight:bold">${s.title}</p><p style="margin:0; font-size:0.8rem; color:var(--text-dim)">${s.artist}</p>
+                </div>
+            `).join('');
         }
 
-        function toggleLoop() { audio.loop = !audio.loop; document.getElementById('loop-btn').classList.toggle('active-mode'); }
+        function filterHome(q) {
+            const filtered = ALL_SONGS.filter(s => s.title.toLowerCase().includes(q.toLowerCase()) || s.artist.toLowerCase().includes(q.toLowerCase()));
+            renderHome(filtered);
+        }
 
-        // --- UI & PLAYLISTS ---
         function showPage(p) {
             document.querySelectorAll('.page-view').forEach(v => v.classList.add('hidden'));
             document.getElementById(p + '-page').classList.remove('hidden');
@@ -305,6 +344,7 @@
         function openSheet(t, id = null) {
             document.getElementById('overlay').classList.add('active');
             if (t === 'create') document.getElementById('sheet-create').classList.add('active');
+            else if (t === 'stats') { renderStats(); document.getElementById('sheet-stats').classList.add('active'); }
             else { selectedId = id; renderOptions(); document.getElementById('sheet-add').classList.add('active'); }
         }
 
