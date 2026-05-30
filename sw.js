@@ -1,14 +1,11 @@
-const CACHE_NAME = 'purpl3l3an-cache-v2'; // Aggiornato la versione per forzare il refresh
+const CACHE_NAME = 'purpl3l3an-cache-v3';
 
-// 1. Elenco di TUTTI i file di sistema e della grafica
 const STATIC_ASSETS = [
     './',
     './index.html',
     './favicon.ico'
 ];
 
-// 2. Elenco completo di tutte le tue tracce audio
-// Il Service Worker le scaricherà in background non appena aprirai il sito con internet attivo
 const MUSIC_ASSETS = [
     'music/dazero.mp3',
     'music/!ly.mp3',
@@ -51,7 +48,7 @@ const MUSIC_ASSETS = [
     'music/mar+e.m4a',
     'music/okk@pp@.m4a',
     'music/l%p.m4a',
-    '_bilico_.m4a',
+    'music/_bilico_.m4a',
     'music/r()t()nda.m4a',
     'music/ye@h.m4a',
     'music/come t! vorre!.m4a',
@@ -68,69 +65,53 @@ const MUSIC_ASSETS = [
     'music/m%n.m4a'
 ];
 
-// Uniamo tutto in un unico grande zaino da salvare subito
-const ALL_ASSETS = [...STATIC_ASSETS, ...MUSIC_ASSETS];
-
-// Installazione: scarica TUTTO subito in cache
+// Installazione atomica pezzo per pezzo
 self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
-            console.log('[Service Worker] Scaricamento e caching di tutta la libreria musicale...');
-            // Usiamo un ciclo o andiamo tolleranti se qualche traccia manca fisicamente nella cartella
-            return cache.addAll(ALL_ASSETS).catch(err => {
-                console.error('[Service Worker] Errore nel pre-cache, assicurati che tutti i file esistano:', err);
-            });
+        caches.open(CACHE_NAME).then(async (cache) => {
+            console.log('[SW] Start caching...');
+            
+            try {
+                await cache.addAll(STATIC_ASSETS);
+                console.log('[SW] Asset statici salvati.');
+            } catch (e) {
+                console.error('[SW] Errore asset statici', e);
+            }
+
+            for (const track of MUSIC_ASSETS) {
+                try {
+                    await cache.add(track);
+                    console.log(`[SW] In cache: ${track}`);
+                } catch (err) {
+                    console.warn(`[SW] Nome errato o file mancante: ${track}`);
+                }
+            }
+            console.log('[SW] Caching completato!');
         })
     );
     self.skipWaiting();
 });
 
-// Attivazione: eliminiamo la vecchia cache v1
-// Installazione tollerante: se un file fallisce, salva comunque tutti gli altri!
-self.addEventListener('install', (event) => {
+self.addEventListener('activate', (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then(async (cache) => {
-            console.log('[Service Worker] Inizio caching della libreria...');
-            
-            // 1. Salva subito i file di sistema (fondamentali)
-            try {
-                await cache.addAll(STATIC_ASSETS);
-                console.log('[Service Worker] Asset statici salvati con successo.');
-            } catch (err) {
-                console.error('[Service Worker] Errore critico negli asset statici:', err);
-            }
-
-            // 2. Salva le canzoni una per una (se una fallisce, le altre si salvano comunque!)
-            for (const track of MUSIC_ASSETS) {
-                try {
-                    await cache.add(track);
-                    console.log(`[Service Worker] Salvata in cache: ${track}`);
-                } catch (err) {
-                    console.warn(`[Service Worker] Impossibile salvare: ${track}. Controlla se il nome sul PC è corretto o se il file esiste.`);
-                }
-            }
-            console.log('[Service Worker] Processo di caching terminato!');
+        caches.keys().then((keys) => {
+            return Promise.all(keys.map((k) => {
+                if (k !== CACHE_NAME) return caches.delete(k);
+            }));
         })
     );
-    self.skipWaiting();
+    self.clients.claim();
+});
 
-// Fetch: Rispondi dalla cache se presente (ottimo per l'offline completo)
 self.addEventListener('fetch', (event) => {
     event.respondWith(
-        caches.match(event.request).then((cachedResponse) => {
-            if (cachedResponse) {
-                return cachedResponse; // Se c'è in cache (anche offline), usa questo!
-            }
-            
-            // Se non c'è in cache, prova ad andare in rete
-            return fetch(event.request).then((networkResponse) => {
-                if (networkResponse.status === 200) {
-                    const responseToCache = networkResponse.clone();
-                    caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(event.request, responseToCache);
-                    });
+        caches.match(event.request).then((res) => {
+            return res || fetch(event.request).then((networkRes) => {
+                if (networkRes.status === 200) {
+                    const copy = networkRes.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
                 }
-                return networkResponse;
+                return networkRes;
             });
         })
     );
