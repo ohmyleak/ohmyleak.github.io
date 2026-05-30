@@ -4,7 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Purpl3L3an</title>
+    <!-- Collegamento alla Favicon del sito -->
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" href="favicon.ico" type="image/x-icon" />
     <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <style>
         :root {
             --bg-dark: #0a0a0c;
@@ -296,6 +301,18 @@
             { id: 55, title: 'm%n', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b2732f362ec65a3b674cdebd19e1', file: 'music/m%n.m4a' }
         ];
 
+        function init() { 
+            renderHome(ALL_SONGS); 
+            renderPlaylists(); 
+
+        // Registro il Service Worker se supportato dal browser
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker Registrato con successo!', reg))
+                    .catch(err => console.log('Errore nella registrazione del SW:', err));
+            }
+        }
+
         const ALBUM_DATA = {
             '23 6451': { artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b27337baa3bdecc1dc19f7364d82', tracks: ['m12ano', 'occh1 purpl3', 'Come fa1', '2ollipop', 'Scuol4', '5olo', '6itch Remix', 'Blun7 a Swishland', 'M8nstar', 'Oh 9od', 'Gua10', 'Parano1a K1d', 'No14', 'Ch1 5ei te', 'Sw1n6o', '7rapper ma1', '8rosk1', 'Bubb1e 9um', 'Pers0na2',] },
             'Casa Gospel': { artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b27328e7b38336741497d25ea100', tracks: ['Egli è il Re', 'Posto mio', 'Bless su bless', 'Back to back', 'Come polvere', 'So che ci sei', 'One king', 'Occhi miei'] },
@@ -320,9 +337,8 @@
             const container = document.getElementById('album-tracks');
             
             container.innerHTML = album.tracks.map((t, idx) => {
-                // Cerchiamo se la canzone esiste in ALL_SONGS per avere l'ID corretto
                 const existing = ALL_SONGS.find(s => s.title.toLowerCase() === t.toLowerCase());
-                const songId = existing ? existing.id : `alb-${t}`; // ID temporaneo se non esiste
+                const songId = existing ? existing.id : `alb-${t}`;
                 
                 return `
                 <div class="album-list-item" onclick="playFromAlbum('${name}', ${idx})">
@@ -349,7 +365,6 @@
             startPlayback();
         }
 
-        // Helper per ottenere oggetto canzone da titolo/album
         function getSongObject(title, album) {
             const existing = ALL_SONGS.find(s => s.title.toLowerCase() === title.toLowerCase());
             if (existing) return existing;
@@ -358,7 +373,7 @@
                 title: title,
                 artist: album.artist,
                 img: album.img,
-                file: `music/${title.replace(/ /g, '')}.mp3` // Default mp3
+                file: `music/${title.replace(/ /g, '')}.mp3`
             };
         }
 
@@ -367,8 +382,6 @@
         function prepareAddFromAlbum(albumName, title) {
             const album = ALBUM_DATA[albumName];
             const song = getSongObject(title, album);
-            
-            // Se non è in ALL_SONGS, la aggiungiamo temporaneamente o usiamo il suo oggetto
             selectedTempSong = song;
             openSheet('add', song.id);
         }
@@ -381,9 +394,7 @@
 
         function confirmAdd(n) {
             let songToAdd = selectedId;
-            // Se stiamo aggiungendo una canzone dell'album che non esiste in ALL_SONGS
             if (typeof selectedId === 'string' && selectedId.startsWith('alb-')) {
-                // Verifichiamo se l'abbiamo già "salvata" in ALL_SONGS per non duplicare
                 const exists = ALL_SONGS.find(s => s.id === selectedId);
                 if (!exists && selectedTempSong) {
                     ALL_SONGS.push(selectedTempSong);
@@ -399,7 +410,6 @@
         }
 
         function renderDetailGrid() {
-            // Troviamo tutte le canzoni della playlist (cercando in ALL_SONGS)
             const songs = playlists[currentOpenP].map(id => ALL_SONGS.find(s => s.id === id)).filter(s => s !== undefined);
             
             document.getElementById('detail-grid').innerHTML = songs.map((s, idx) => `
@@ -416,7 +426,7 @@
             startPlayback();
         }
 
-        // --- RESTO DEL MOTORE (Invariato) ---
+        // --- MOTORE DI RIPRODUZIONE ---
 
         function trackPlay(songId) {
             playCounts[songId] = (playCounts[songId] || 0) + 1;
@@ -458,6 +468,8 @@
             audio.play().catch(e => console.log("Errore riproduzione:", e));
             updateIcons(true);
         }
+
+        // --- CONTROLLI E INTERFACCIA ---
 
         function downloadCurrentSong() {
             const s = activeQueue[currentIndex];
@@ -540,6 +552,7 @@
         }
 
         function togglePlayerView(show) { document.getElementById('player-view').style.display = show ? 'flex' : 'none'; }
+        
         function openSheet(t, id = null) {
             document.getElementById('overlay').classList.add('active');
             if (t === 'create') document.getElementById('sheet-create').classList.add('active');
@@ -554,16 +567,19 @@
 
         function confirmCreatePlaylist() { const n = document.getElementById('new-p-name').value; if(n){ playlists[n]=[]; save(); renderPlaylists(); closeAllSheets(); document.getElementById('new-p-name').value=""; } }
         function save() { localStorage.setItem('myPlaylists', JSON.stringify(playlists)); }
+        
         function renderPlaylists() {
             document.getElementById('playlist-list').innerHTML = Object.keys(playlists).map(name => `
                 <div style="background:var(--card-bg); padding:18px; border-radius:15px; margin-top:10px; display:flex; justify-content:space-between; cursor:pointer;" onclick="openPlaylist('${name}')"><span>${name}</span><i class="fal fa-chevron-right"></i></div>
             `).join('');
         }
+        
         function openPlaylist(n) { 
             currentOpenP = n; showPage('detail'); document.getElementById('detail-title').innerText=n; 
             document.getElementById('play-all-btn').onclick = () => { if(playlists[n].length > 0) playFromP(0); };
             renderDetailGrid(); 
         }
+        
         function removeSong(id, e) { e.stopPropagation(); playlists[currentOpenP] = playlists[currentOpenP].filter(i => i != id); save(); renderDetailGrid(); }
         function deleteCurrentPlaylist() { if(confirm("Eliminare questa playlist?")){ delete playlists[currentOpenP]; save(); renderPlaylists(); showPage('library'); } }
     </script>
