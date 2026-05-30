@@ -86,21 +86,33 @@ self.addEventListener('install', (event) => {
 });
 
 // Attivazione: eliminiamo la vecchia cache v1
-self.addEventListener('activate', (event) => {
+// Installazione tollerante: se un file fallisce, salva comunque tutti gli altri!
+self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.map((cache) => {
-                    if (cache !== CACHE_NAME) {
-                        console.log('[Service Worker] Rimozione vecchia cache:', cache);
-                        return caches.delete(cache);
-                    }
-                })
-            );
+        caches.open(CACHE_NAME).then(async (cache) => {
+            console.log('[Service Worker] Inizio caching della libreria...');
+            
+            // 1. Salva subito i file di sistema (fondamentali)
+            try {
+                await cache.addAll(STATIC_ASSETS);
+                console.log('[Service Worker] Asset statici salvati con successo.');
+            } catch (err) {
+                console.error('[Service Worker] Errore critico negli asset statici:', err);
+            }
+
+            // 2. Salva le canzoni una per una (se una fallisce, le altre si salvano comunque!)
+            for (const track of MUSIC_ASSETS) {
+                try {
+                    await cache.add(track);
+                    console.log(`[Service Worker] Salvata in cache: ${track}`);
+                } catch (err) {
+                    console.warn(`[Service Worker] Impossibile salvare: ${track}. Controlla se il nome sul PC è corretto o se il file esiste.`);
+                }
+            }
+            console.log('[Service Worker] Processo di caching terminato!');
         })
     );
-    self.clients.claim();
-});
+    self.skipWaiting();
 
 // Fetch: Rispondi dalla cache se presente (ottimo per l'offline completo)
 self.addEventListener('fetch', (event) => {
