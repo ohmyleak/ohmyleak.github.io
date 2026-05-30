@@ -1,4 +1,4 @@
-const CACHE_NAME = 'purpl3l3an-cache-v3';
+const CACHE_NAME = 'purpl3l3an-cache-v4'; // Cambiato versione per forzare l'aggiornamento
 
 const STATIC_ASSETS = [
     './',
@@ -78,9 +78,11 @@ self.addEventListener('install', (event) => {
                 console.error('[SW] Errore asset statici', e);
             }
 
+            // Usiamo encodeURI così i file con caratteri speciali e spazi vengono indicizzati correttamente
             for (const track of MUSIC_ASSETS) {
+                const encodedTrack = encodeURI(track);
                 try {
-                    await cache.add(track);
+                    await cache.add(encodedTrack);
                     console.log(`[SW] In cache: ${track}`);
                 } catch (err) {
                     console.warn(`[SW] Nome errato o file mancante: ${track}`);
@@ -103,16 +105,52 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
+// Gestione del fetch con supporto specifico per lo streaming audio (Range Requests)
 self.addEventListener('fetch', (event) => {
-    event.respondWith(
-        caches.match(event.request).then((res) => {
-            return res || fetch(event.request).then((networkRes) => {
-                if (networkRes.status === 200) {
-                    const copy = networkRes.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+    // Gestione delle richieste "Range" (tipiche dei player audio del browser)
+    if (event.request.headers.get('range')) {
+        event.respondWith(
+            caches.match(event.request).then((cachedResponse) => {
+                if (cachedResponse) {
+                    return returnRangeResponse(event.request, cachedResponse);
                 }
-                return networkRes;
-            });
-        })
-    );
+                return fetch(event.request);
+            })
+        );
+    } else {
+        // Richieste standard (HTML, Icone, ecc.)
+        event.respondWith(
+            caches.match(event.request).then((res) => {
+                return res || fetch(event.request).then((networkRes) => {
+                    if (networkRes.status === 200) {
+                        const copy = networkRes.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+                    }
+                    return networkRes;
+                });
+            })
+        );
+    }
 });
+
+// Funzione helper per simulare le risposte parziali (HTTP 206) necessarie per i player audio offline
+async function returnRangeResponse(request, cachedResponse) {
+    const rangeHeader = request.headers.get('range');
+    const arrayBuffer = await cachedResponse.arrayBuffer();
+    const bytes = rangeHeader.replace(/bytes=/, '').split('-');
+    const start = parseInt(bytes[0], 10);
+    const end = bytes[1] ? parseInt(bytes[1], 10) : arrayBuffer.byteLength - 1;
+    
+    const chunk = arrayBuffer.slice(start, end + 1);
+    
+    return new Response(chunk, {
+        status: 206,
+        statusText: 'Partial Content',
+        headers: {
+            'Content-Range': `bytes ${start}-${end}/${arrayBuffer.byteLength}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': chunk.byteLength,
+            'Content-Type': cachedResponse.headers.get('content-type')
+        }
+    });
+}
