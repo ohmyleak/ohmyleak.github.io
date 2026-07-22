@@ -136,6 +136,10 @@
                 <img src="https://i.scdn.co/image/ab67616d0000b27328e7b38336741497d25ea100">
                 <p style="margin:10px 0 0; font-weight:bold">Casa Gospel</p>
             </div>
+            <div class="album-item" onclick="openAlbum('OMNI I')">
+                <img src="https://i.scdn.co/image/ab67616d0000e1a34fa78b565f58cfc9cd161d1f">
+                <p style="margin:10px 0 0; font-weight:bold">OMNI I</p>
+            </div>
         </div>
         
         <h3 style="color:var(--text-dim); font-size: 0.9rem; margin-bottom: 15px;">NAYT</h3>
@@ -298,7 +302,15 @@
             { id: 52, title: 'w()ah', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b2732f362ec65a3b674cdebd19e1', file: 'music/w()ah.m4a' },
             { id: 53, title: 'c!ao', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b2732f362ec65a3b674cdebd19e1', file: 'music/c!ao.m4a' },
             { id: 54, title: '+ bla se c’è bling', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b2732f362ec65a3b674cdebd19e1', file: 'music/bling.m4a' },
-            { id: 55, title: 'm%n', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b2732f362ec65a3b674cdebd19e1', file: 'music/m%n.m4a' }
+            { id: 55, title: 'm%n', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b2732f362ec65a3b674cdebd19e1', file: 'music/m%n.m4a' },
+
+            { id: 56, title: '396', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000e1a34fa78b565f58cfc9cd161d1f', file: 'music/396.m4a' },
+            { id: 57, title: '417', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000e1a34fa78b565f58cfc9cd161d1f', file: 'music/417.m4a' },
+            { id: 58, title: '528', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000e1a34fa78b565f58cfc9cd161d1f', file: 'music/528.m4a' },
+            { id: 59, title: '639', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000e1a34fa78b565f58cfc9cd161d1f', file: 'music/639.m4a' },
+            { id: 60, title: '741', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000e1a34fa78b565f58cfc9cd161d1f', file: 'music/741.m4a' },
+            { id: 61, title: '852', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000e1a34fa78b565f58cfc9cd161d1f', file: 'music/852.m4a' },
+            { id: 62, title: '963', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000e1a34fa78b565f58cfc9cd161d1f', file: 'music/963.m4a' }
         ];
 
         function init() { 
@@ -318,7 +330,8 @@
             'Casa Gospel': { artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b27328e7b38336741497d25ea100', tracks: ['Egli è il Re', 'Posto mio', 'Bless su bless', 'Back to back', 'Come polvere', 'So che ci sei', 'One king', 'Occhi miei'] },
             'c@ra++ere s?ec!@le': { artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b2732f362ec65a3b674cdebd19e1', tracks: ['!ly', 'molecole', 'mar+e', 'okk@pp@', 'l%p', '_bilico_', 'r()t()nda', 'ye@h', 'come t! vorre!', 'rock & rolla', 'sci@ll@', 'r!va', 'mi @mi o è f@ke', 's!r!', 'b@by nel bed', 'cas!no nella m!a testa', 'w()ah', 'c!ao', '+ bla se c’è bling', 'm%n',] },
             'MOOD': { artist: 'Nayt', img: 'https://images.genius.com/b0f6f6006a0ab92ee138b8d8bea5c230.1000x1000x1.png', tracks: [] },
-            'HABITAT': { artist: 'Nayt', img: 'https://images.genius.com/bb98d956377150136b025d7eaffdc04c.1000x1000x1.png', tracks: [] }
+            'HABITAT': { artist: 'Nayt', img: 'https://images.genius.com/bb98d956377150136b025d7eaffdc04c.1000x1000x1.png', tracks: [] },
+            'OMNI I': { artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000e1a34fa78b565f58cfc9cd161d1f', tracks: ['396', '417', '528', '639', '741', '852', '963'] }
         };
 
         let playlists = JSON.parse(localStorage.getItem('myPlaylists')) || {};
