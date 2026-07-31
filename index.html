@@ -97,6 +97,16 @@
         .stat-item { display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 12px; margin-bottom: 8px; }
         .stat-rank { font-weight: bold; color: var(--primary-purple); width: 25px; }
 
+        /* Stili Impostazioni e Ad Badge */
+        .setting-box { background: var(--card-bg); padding: 20px; border-radius: 15px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .toggle-switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--primary-purple); }
+        input:checked + .slider:before { transform: translateX(24px); }
+        .ad-badge { background: var(--danger); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; margin-left: 10px; }
+
         @media (min-width: 768px) {
             .music-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 30px; margin-top: 20px; }
             .page-view { max-width: 1200px; margin: 0 auto; padding: 40px; }
@@ -173,6 +183,32 @@
         <div id="playlist-list"></div>
     </div>
 
+    <!-- IMPOSTAZIONI -->
+    <div id="settings-page" class="page-view hidden">
+        <header><h1>Impostazioni</h1></header>
+        <div class="setting-box">
+            <div>
+                <p style="margin:0; font-weight:bold;">Attiva Pubblicità</p>
+                <p style="margin:5px 0 0; font-size:0.8rem; color:var(--text-dim);">Riproduce brevi annunci audio durante l'ascolto.</p>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="ad-toggle" onchange="toggleAds(this.checked)">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="setting-box">
+            <div>
+                <p style="margin:0; font-weight:bold;">Frequenza Pubblicità</p>
+                <p style="margin:5px 0 0; font-size:0.8rem; color:var(--text-dim);">Ogni quante canzoni riprodurre un annuncio.</p>
+            </div>
+            <select id="ad-freq" onchange="changeAdFrequency(this.value)" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.1); color:white; padding:8px; border-radius:8px;">
+                <option value="2">Ogni 2 canzoni</option>
+                <option value="3" selected>Ogni 3 canzoni</option>
+                <option value="5">Ogni 5 canzoni</option>
+            </select>
+        </div>
+    </div>
+
     <!-- DETTAGLIO PLAYLIST -->
     <div id="detail-page" class="page-view hidden">
         <header>
@@ -201,9 +237,9 @@
     <!-- PLAYER FULL VIEW -->
     <div id="player-view">
         <i class="fal fa-chevron-down" onclick="togglePlayerView(false)" style="position: absolute; top: 40px; left: 25px; font-size: 1.5rem; cursor:pointer;"></i>
-        <i class="fal fa-download" onclick="downloadCurrentSong()" style="position: absolute; top: 40px; right: 25px; font-size: 1.5rem; cursor:pointer; color:var(--primary-purple); background:rgba(255,255,255,0.05); padding:10px; border-radius:50%;"></i>
+        <i class="fal fa-download" id="p-download-btn" onclick="downloadCurrentSong()" style="position: absolute; top: 40px; right: 25px; font-size: 1.5rem; cursor:pointer; color:var(--primary-purple); background:rgba(255,255,255,0.05); padding:10px; border-radius:50%;"></i>
         <img id="p-img" class="p-album-art" src="">
-        <h2 id="p-title" style="margin:25px 0 5px"></h2>
+        <h2 id="p-title" style="margin:25px 0 5px; text-align: center;"></h2>
         <p id="p-artist" style="color: var(--text-dim); margin-bottom: 20px;"></p>
         <div id="progress-container" onmousedown="startSeek(event)" ontouchstart="startSeek(event)">
             <div id="progress-bar"></div>
@@ -211,9 +247,9 @@
         <div class="p-controls">
             <button class="side-btn" id="shuffle-btn" onclick="toggleShuffle()" style="background:none; border:none; color:var(--text-dim); font-size:1.2rem; cursor:pointer;"><i class="fas fa-random"></i></button>
             <div style="display:flex; align-items:center; gap:25px">
-                <button onclick="prevSong()" style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;"><i class="fas fa-step-backward"></i></button>
+                <button id="p-prev-btn" onclick="prevSong()" style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;"><i class="fas fa-step-backward"></i></button>
                 <button class="main-btn" onclick="togglePlay()"><i id="p-play-icon" class="fas fa-play"></i></button>
-                <button onclick="nextSong()" style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;"><i class="fas fa-step-forward"></i></button>
+                <button id="p-next-btn" onclick="nextSong()" style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;"><i class="fas fa-step-forward"></i></button>
             </div>
             <button id="loop-btn" onclick="toggleLoop()" style="background:none; border:none; color:var(--text-dim); font-size:1.2rem; cursor:pointer;"><i class="fas fa-redo-alt"></i></button>
         </div>
@@ -240,6 +276,7 @@
         <div class="nav-item active" id="nav-home" onclick="showPage('home')"><i class="fas fa-home"></i><span>Home</span></div>
         <div class="nav-item" id="nav-albums" onclick="showPage('albums')"><i class="fas fa-compact-disc"></i><span>Album</span></div>
         <div class="nav-item" id="nav-lib" onclick="showPage('library')"><i class="fas fa-folders"></i><span>Libreria</span></div>
+        <div class="nav-item" id="nav-settings" onclick="showPage('settings')"><i class="fas fa-cog"></i><span>Opzioni</span></div>
     </nav>
 
     <script>
@@ -257,7 +294,6 @@
             { id: 10, title: 'occh1 purpl3', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b27337baa3bdecc1dc19f7364d82', file: 'music/occh1purpl3.m4a' },
             { id: 11, title: 'siLLy cUp', artist: 'Thasup', img: 'https://images.genius.com/498b5dbfe43edac6d9a2381138ad3ff5.1000x1000x1.png', file: 'music/sillycup.mp3' },
             { id: 12, title: 'Reflections', artist: 'The Neighbourhood', img: 'https://i.scdn.co/image/ab67616d0000b2739b6ac98a52f62d5cb473da40', file: 'music/reflections.mp3' },
-
             { id: 13, title: 'Egli è il Re', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b27328e7b38336741497d25ea100', file: 'music/eglièilre.m4a' },
             { id: 14, title: 'Posto mio', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b27328e7b38336741497d25ea100', file: 'music/postomio.m4a' },
             { id: 15, title: 'Bless su bless', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b27328e7b38336741497d25ea100', file: 'music/blesssubless.m4a' },
@@ -266,7 +302,6 @@
             { id: 18, title: 'So che ci sei', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b27328e7b38336741497d25ea100', file: 'music/sochecisei.m4a' },
             { id: 19, title: 'One king', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b27328e7b38336741497d25ea100', file: 'music/oneking.m4a' },
             { id: 20, title: 'Occhi miei', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b27328e7b38336741497d25ea100', file: 'music/occhimiei.m4a' },
-
             { id: 21, title: 'Come fa1', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b27337baa3bdecc1dc19f7364d82', file: 'music/comefa1.m4a' },
             { id: 22, title: '2ollipop', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b27337baa3bdecc1dc19f7364d82', file: 'music/2ollipop.m4a' },
             { id: 23, title: 'Pers0na2', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b27337baa3bdecc1dc19f7364d82', file: 'music/pers0na2.m4a' },
@@ -284,7 +319,6 @@
             { id: 35, title: '7rapper ma1', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b27337baa3bdecc1dc19f7364d82', file: 'music/7rapperma1.m4a' },
             { id: 36, title: '8rosk1', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b27337baa3bdecc1dc19f7364d82', file: 'music/8rosk1.m4a' },
             { id: 37, title: 'Bubb1e 9um', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b27337baa3bdecc1dc19f7364d82', file: 'music/bubb1e9um.m4a' },
-
             { id: 38, title: 'mar+e', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b2732f362ec65a3b674cdebd19e1', file: 'music/mar+e.m4a' },
             { id: 39, title: 'okk@pp@', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b2732f362ec65a3b674cdebd19e1', file: 'music/okk@pp@.m4a' },
             { id: 40, title: 'l%p', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b2732f362ec65a3b674cdebd19e1', file: 'music/l%p.m4a' },
@@ -303,7 +337,6 @@
             { id: 53, title: 'c!ao', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b2732f362ec65a3b674cdebd19e1', file: 'music/c!ao.m4a' },
             { id: 54, title: '+ bla se c’è bling', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b2732f362ec65a3b674cdebd19e1', file: 'music/bling.m4a' },
             { id: 55, title: 'm%n', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b2732f362ec65a3b674cdebd19e1', file: 'music/m%n.m4a' },
-
             { id: 56, title: '396', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000e1a34fa78b565f58cfc9cd161d1f', file: 'music/396.m4a' },
             { id: 57, title: '417', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000e1a34fa78b565f58cfc9cd161d1f', file: 'music/417.m4a' },
             { id: 58, title: '528', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000e1a34fa78b565f58cfc9cd161d1f', file: 'music/528.m4a' },
@@ -313,17 +346,11 @@
             { id: 62, title: '963', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000e1a34fa78b565f58cfc9cd161d1f', file: 'music/963.m4a' }
         ];
 
-        function init() { 
-            renderHome(ALL_SONGS); 
-            renderPlaylists(); 
-
-        // Registro il Service Worker se supportato dal browser
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('Service Worker Registrato con successo!', reg))
-                    .catch(err => console.log('Errore nella registrazione del SW:', err));
-            }
-        }
+        // --- LISTA FILE AUDIO PUBBLICITÀ ---
+        const ADS_LIST = [
+            { title: 'Sponsor Spot 1', artist: 'Pubblicità', img: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=500', file: 'music/ads/ad1.mp3' },
+            { title: 'Sponsor Spot 2', artist: 'Pubblicità', img: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=500', file: 'music/ads/ad2.mp3' }
+        ];
 
         const ALBUM_DATA = {
             '23 6451': { artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b27337baa3bdecc1dc19f7364d82', tracks: ['m12ano', 'occh1 purpl3', 'Come fa1', '2ollipop', 'Scuol4', '5olo', '6itch Remix', 'Blun7 a Swishland', 'M8nstar', 'Oh 9od', 'Gua10', 'Parano1a K1d', 'No14', 'Ch1 5ei te', 'Sw1n6o', '7rapper ma1', '8rosk1', 'Bubb1e 9um', 'Pers0na2',] },
@@ -336,13 +363,43 @@
 
         let playlists = JSON.parse(localStorage.getItem('myPlaylists')) || {};
         let playCounts = JSON.parse(localStorage.getItem('playCounts')) || {};
+        
+        // Impostazioni Pubblicità
+        let adsEnabled = JSON.parse(localStorage.getItem('adsEnabled')) ?? true;
+        let adFrequency = parseInt(localStorage.getItem('adFrequency')) || 3;
+        let songsPlayedCount = 0;
+        let isPlayingAd = false;
+
         let currentOpenP = null, activeQueue = [], currentIndex = 0, isShuffle = false, selectedId = null, selectedTempSong = null;
         const audio = document.getElementById('audio-engine');
 
-        function init() { renderHome(ALL_SONGS); renderPlaylists(); }
+        function init() { 
+            renderHome(ALL_SONGS); 
+            renderPlaylists(); 
+            
+            // Inizializza controlli impostazioni
+            document.getElementById('ad-toggle').checked = adsEnabled;
+            document.getElementById('ad-freq').value = adFrequency;
+
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker Registrato con successo!', reg))
+                    .catch(err => console.log('Errore nella registrazione del SW:', err));
+            }
+        }
+
+        // --- GESTIONE IMPOSTAZIONI AD ---
+        function toggleAds(enabled) {
+            adsEnabled = enabled;
+            localStorage.setItem('adsEnabled', JSON.stringify(adsEnabled));
+        }
+
+        function changeAdFrequency(val) {
+            adFrequency = parseInt(val);
+            localStorage.setItem('adFrequency', adFrequency);
+        }
 
         // --- GESTIONE ALBUM ---
-
         function openAlbum(name) {
             const album = ALBUM_DATA[name];
             document.getElementById('album-detail-title').innerText = name;
@@ -375,6 +432,7 @@
             const album = ALBUM_DATA[albumName];
             activeQueue = album.tracks.map(title => getSongObject(title, album));
             currentIndex = trackIdx;
+            isPlayingAd = false;
             startPlayback();
         }
 
@@ -391,7 +449,6 @@
         }
 
         // --- GESTIONE PLAYLIST ---
-
         function prepareAddFromAlbum(albumName, title) {
             const album = ALBUM_DATA[albumName];
             const song = getSongObject(title, album);
@@ -436,11 +493,11 @@
         function playFromP(idx) {
             activeQueue = playlists[currentOpenP].map(id => ALL_SONGS.find(s => s.id === id)).filter(s => s !== undefined);
             currentIndex = idx;
+            isPlayingAd = false;
             startPlayback();
         }
 
         // --- MOTORE DI RIPRODUZIONE ---
-
         function trackPlay(songId) {
             playCounts[songId] = (playCounts[songId] || 0) + 1;
             localStorage.setItem('playCounts', JSON.stringify(playCounts));
@@ -469,8 +526,12 @@
         function startPlayback() {
             const s = activeQueue[currentIndex];
             if(!s) return;
+            
+            isPlayingAd = false;
+            setControlsDisabled(false);
+
             trackPlay(s.id); 
-            document.getElementById('p-title').innerText = s.title;
+            document.getElementById('p-title').innerHTML = s.title;
             document.getElementById('p-artist').innerText = s.artist;
             document.getElementById('p-img').src = s.img;
             document.getElementById('m-title').innerText = s.title;
@@ -482,9 +543,39 @@
             updateIcons(true);
         }
 
-        // --- CONTROLLI E INTERFACCIA ---
+        function playAd() {
+            if (ADS_LIST.length === 0) {
+                nextSongAfterAd();
+                return;
+            }
+            isPlayingAd = true;
+            const randomAd = ADS_LIST[Math.floor(Math.random() * ADS_LIST.length)];
 
+            document.getElementById('p-title').innerHTML = `${randomAd.title} <span class="ad-badge">Ad</span>`;
+            document.getElementById('p-artist').innerText = randomAd.artist;
+            document.getElementById('p-img').src = randomAd.img;
+            document.getElementById('m-title').innerText = randomAd.title;
+            document.getElementById('m-artist').innerText = randomAd.artist;
+            document.getElementById('m-img').src = randomAd.img;
+            
+            setControlsDisabled(true);
+
+            audio.src = randomAd.file;
+            audio.play().catch(e => console.log("Errore Ad:", e));
+            updateIcons(true);
+        }
+
+        function setControlsDisabled(disabled) {
+            document.getElementById('p-prev-btn').style.pointerEvents = disabled ? 'none' : 'auto';
+            document.getElementById('p-next-btn').style.pointerEvents = disabled ? 'none' : 'auto';
+            document.getElementById('p-download-btn').style.pointerEvents = disabled ? 'none' : 'auto';
+            document.getElementById('p-prev-btn').style.opacity = disabled ? '0.3' : '1';
+            document.getElementById('p-next-btn').style.opacity = disabled ? '0.3' : '1';
+        }
+
+        // --- CONTROLLI E INTERFACCIA ---
         function downloadCurrentSong() {
+            if(isPlayingAd) return;
             const s = activeQueue[currentIndex];
             if (!s) return;
             const a = document.createElement('a'); a.href = s.file;
@@ -505,7 +596,7 @@
 
         function playSingle(id) { 
             const s = ALL_SONGS.find(s => s.id === id);
-            if(s) { activeQueue = [s]; currentIndex = 0; startPlayback(); }
+            if(s) { activeQueue = [s]; currentIndex = 0; isPlayingAd = false; startPlayback(); }
         }
 
         function nextSong() {
@@ -517,7 +608,17 @@
             startPlayback();
         }
 
-        function prevSong() { currentIndex = (currentIndex - 1 + activeQueue.length) % activeQueue.length; startPlayback(); }
+        function nextSongAfterAd() {
+            currentIndex = (currentIndex + 1) % activeQueue.length;
+            startPlayback();
+        }
+
+        function prevSong() { 
+            if(isPlayingAd) return;
+            currentIndex = (currentIndex - 1 + activeQueue.length) % activeQueue.length; 
+            startPlayback(); 
+        }
+
         function toggleShuffle() { isShuffle = !isShuffle; document.getElementById('shuffle-btn').classList.toggle('active-mode', isShuffle); }
         function toggleLoop() { audio.loop = !audio.loop; document.getElementById('loop-btn').classList.toggle('active-mode'); }
 
@@ -528,6 +629,7 @@
         };
 
         function startSeek(e) {
+            if (isPlayingAd) return; // Impedisce lo skip temporale durante le pubblicità
             const rect = document.getElementById('progress-container').getBoundingClientRect();
             const updateSeek = (clientX) => {
                 const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
@@ -540,7 +642,25 @@
             document.addEventListener('touchmove', move); document.addEventListener('touchend', end);
         }
 
-        audio.onended = () => { if (audio.loop) { audio.play(); } else { nextSong(); } };
+        audio.onended = () => { 
+            if (isPlayingAd) {
+                // Finito l'annuncio pubblicitario, riprende la musica
+                nextSongAfterAd();
+                return;
+            }
+
+            if (audio.loop) { 
+                audio.play(); 
+            } else { 
+                songsPlayedCount++;
+                if (adsEnabled && songsPlayedCount >= adFrequency) {
+                    songsPlayedCount = 0;
+                    playAd();
+                } else {
+                    nextSong(); 
+                }
+            } 
+        };
 
         function renderHome(songs) {
             document.getElementById('home-grid').innerHTML = songs.filter(s => typeof s.id === 'number').map(s => `
@@ -562,6 +682,7 @@
             document.getElementById('nav-home').classList.toggle('active', p === 'home');
             document.getElementById('nav-albums').classList.toggle('active', p === 'albums' || p === 'album-detail');
             document.getElementById('nav-lib').classList.toggle('active', p === 'library' || p === 'detail');
+            document.getElementById('nav-settings').classList.toggle('active', p === 'settings');
         }
 
         function togglePlayerView(show) { document.getElementById('player-view').style.display = show ? 'flex' : 'none'; }
