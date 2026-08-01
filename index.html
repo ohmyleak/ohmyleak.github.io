@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Purpl3L3an</title>
-    <!-- Collegamento alla Favicon del sito -->
+    <!-- Collegamento alla Favicon e CSS del sito -->
     <link rel="manifest" href="./manifest.json">
     <link rel="icon" href="favicon.ico" type="image/x-icon" />
     <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" />
@@ -168,7 +168,7 @@
     <!-- DETTAGLIO ALBUM -->
     <div id="album-detail-page" class="page-view hidden">
         <header>
-            <i class="fal fa-arrow-left" onclick="showPage('albums')"></i>
+            <i class="fal fa-arrow-left" onclick="history.back()"></i>
             <h1 id="album-detail-title">Album</h1>
         </header>
         <button id="play-album-btn" class="primary-btn" style="margin-bottom: 20px;"><i class="fas fa-play"></i> Riproduci Tutto</button>
@@ -212,7 +212,7 @@
     <!-- DETTAGLIO PLAYLIST -->
     <div id="detail-page" class="page-view hidden">
         <header>
-            <i class="fal fa-arrow-left" onclick="showPage('library')"></i>
+            <i class="fal fa-arrow-left" onclick="history.back()"></i>
             <h1 id="detail-title">Playlist</h1>
             <i class="fal fa-trash" onclick="deleteCurrentPlaylist()" style="color: var(--danger)"></i>
         </header>
@@ -236,7 +236,7 @@
 
     <!-- PLAYER FULL VIEW -->
     <div id="player-view">
-        <i class="fal fa-chevron-down" onclick="togglePlayerView(false)" style="position: absolute; top: 40px; left: 25px; font-size: 1.5rem; cursor:pointer;"></i>
+        <i class="fal fa-chevron-down" onclick="history.back()" style="position: absolute; top: 40px; left: 25px; font-size: 1.5rem; cursor:pointer;"></i>
         <i class="fal fa-download" id="p-download-btn" onclick="downloadCurrentSong()" style="position: absolute; top: 40px; right: 25px; font-size: 1.5rem; cursor:pointer; color:var(--primary-purple); background:rgba(255,255,255,0.05); padding:10px; border-radius:50%;"></i>
         <img id="p-img" class="p-album-art" src="">
         <h2 id="p-title" style="margin:25px 0 5px; text-align: center;"></h2>
@@ -353,9 +353,9 @@
         ];
 
         const ALBUM_DATA = {
-            '23 6451': { artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b27337baa3bdecc1dc19f7364d82', tracks: ['m12ano', 'occh1 purpl3', 'Come fa1', '2ollipop', 'Scuol4', '5olo', '6itch Remix', 'Blun7 a Swishland', 'M8nstar', 'Oh 9od', 'Gua10', 'Parano1a K1d', 'No14', 'Ch1 5ei te', 'Sw1n6o', '7rapper ma1', '8rosk1', 'Bubb1e 9um', 'Pers0na2',] },
+            '23 6451': { artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b27337baa3bdecc1dc19f7364d82', tracks: ['m12ano', 'occh1 purpl3', 'Come fa1', '2ollipop', 'Scuol4', '5olo', '6itch Remix', 'Blun7 a Swishland', 'M8nstar', 'Oh 9od', 'Gua10', 'Parano1a K1d', 'No14', 'Ch1 5ei te', 'Sw1n6o', '7rapper ma1', '8rosk1', 'Bubb1e 9um', 'Pers0na2'] },
             'Casa Gospel': { artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b27328e7b38336741497d25ea100', tracks: ['Egli è il Re', 'Posto mio', 'Bless su bless', 'Back to back', 'Come polvere', 'So che ci sei', 'One king', 'Occhi miei'] },
-            'c@ra++ere s?ec!@le': { artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b2732f362ec65a3b674cdebd19e1', tracks: ['!ly', 'molecole', 'mar+e', 'okk@pp@', 'l%p', '_bilico_', 'r()t()nda', 'ye@h', 'come t! vorre!', 'rock & rolla', 'sci@ll@', 'r!va', 'mi @mi o è f@ke', 's!r!', 'b@by nel bed', 'cas!no nella m!a testa', 'w()ah', 'c!ao', '+ bla se c’è bling', 'm%n',] },
+            'c@ra++ere s?ec!@le': { artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b2732f362ec65a3b674cdebd19e1', tracks: ['!ly', 'molecole', 'mar+e', 'okk@pp@', 'l%p', '_bilico_', 'r()t()nda', 'ye@h', 'come t! vorre!', 'rock & rolla', 'sci@ll@', 'r!va', 'mi @mi o è f@ke', 's!r!', 'b@by nel bed', 'cas!no nella m!a testa', 'w()ah', 'c!ao', '+ bla se c’è bling', 'm%n'] },
             'MOOD': { artist: 'Nayt', img: 'https://images.genius.com/b0f6f6006a0ab92ee138b8d8bea5c230.1000x1000x1.png', tracks: [] },
             'HABITAT': { artist: 'Nayt', img: 'https://images.genius.com/bb98d956377150136b025d7eaffdc04c.1000x1000x1.png', tracks: [] },
             'OMNI I': { artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000e1a34fa78b565f58cfc9cd161d1f', tracks: ['396', '417', '528', '639', '741', '852', '963'] }
@@ -373,6 +373,46 @@
         let currentOpenP = null, activeQueue = [], currentIndex = 0, isShuffle = false, selectedId = null, selectedTempSong = null;
         const audio = document.getElementById('audio-engine');
 
+        // --- GESTIONE CRONOLOGIA E TASTO INDIETRO (History API) ---
+        let currentViewState = { page: 'home', player: false, sheet: false };
+
+        window.onpopstate = function(event) {
+            const state = event.state;
+            if (!state) {
+                applyViewState({ page: 'home', player: false, sheet: false });
+                return;
+            }
+            applyViewState(state);
+        };
+
+        function applyViewState(state) {
+            currentViewState = state;
+
+            // 1. Gestione Overlays / Bottom Sheets
+            if (!state.sheet) {
+                document.getElementById('overlay').classList.remove('active');
+                document.querySelectorAll('.bottom-sheet').forEach(s => s.classList.remove('active'));
+            }
+
+            // 2. Gestione Full Player View
+            document.getElementById('player-view').style.display = state.player ? 'flex' : 'none';
+
+            // 3. Gestione Pagine principali
+            document.querySelectorAll('.page-view').forEach(v => v.classList.add('hidden'));
+            document.getElementById(state.page + '-page').classList.remove('hidden');
+
+            document.getElementById('nav-home').classList.toggle('active', state.page === 'home');
+            document.getElementById('nav-albums').classList.toggle('active', state.page === 'albums' || state.page === 'album-detail');
+            document.getElementById('nav-lib').classList.toggle('active', state.page === 'library' || state.page === 'detail');
+            document.getElementById('nav-settings').classList.toggle('active', state.page === 'settings');
+        }
+
+        function pushNewState(newState) {
+            const combinedState = { ...currentViewState, ...newState };
+            history.pushState(combinedState, "");
+            applyViewState(combinedState);
+        }
+
         function init() { 
             renderHome(ALL_SONGS); 
             renderPlaylists(); 
@@ -381,11 +421,23 @@
             document.getElementById('ad-toggle').checked = adsEnabled;
             document.getElementById('ad-freq').value = adFrequency;
 
+            // Salva lo stato base iniziale per la navigazione
+            history.replaceState({ page: 'home', player: false, sheet: false }, "");
+
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('./sw.js')
                     .then(reg => console.log('Service Worker Registrato con successo!', reg))
                     .catch(err => console.log('Errore nella registrazione del SW:', err));
             }
+        }
+
+        // --- GESTIONE NAVIGAZIONE ---
+        function showPage(p) {
+            pushNewState({ page: p, player: false, sheet: false });
+        }
+
+        function togglePlayerView(show) {
+            pushNewState({ player: show });
         }
 
         // --- GESTIONE IMPOSTAZIONI AD ---
@@ -425,7 +477,8 @@
                     </div>
                 </div>
             `}).join('');
-            showPage('album-detail');
+            
+            pushNewState({ page: 'album-detail' });
         }
 
         function playFromAlbum(albumName, trackIdx) {
@@ -629,7 +682,7 @@
         };
 
         function startSeek(e) {
-            if (isPlayingAd) return; // Impedisce lo skip temporale durante le pubblicità
+            if (isPlayingAd) return;
             const rect = document.getElementById('progress-container').getBoundingClientRect();
             const updateSeek = (clientX) => {
                 const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
@@ -644,7 +697,6 @@
 
         audio.onended = () => { 
             if (isPlayingAd) {
-                // Finito l'annuncio pubblicitario, riprende la musica
                 nextSongAfterAd();
                 return;
             }
@@ -676,27 +728,22 @@
             renderHome(filtered);
         }
 
-        function showPage(p) {
-            document.querySelectorAll('.page-view').forEach(v => v.classList.add('hidden'));
-            document.getElementById(p + '-page').classList.remove('hidden');
-            document.getElementById('nav-home').classList.toggle('active', p === 'home');
-            document.getElementById('nav-albums').classList.toggle('active', p === 'albums' || p === 'album-detail');
-            document.getElementById('nav-lib').classList.toggle('active', p === 'library' || p === 'detail');
-            document.getElementById('nav-settings').classList.toggle('active', p === 'settings');
-        }
-
-        function togglePlayerView(show) { document.getElementById('player-view').style.display = show ? 'flex' : 'none'; }
-        
         function openSheet(t, id = null) {
-            document.getElementById('overlay').classList.add('active');
             if (t === 'create') document.getElementById('sheet-create').classList.add('active');
             else if (t === 'stats') { renderStats(); document.getElementById('sheet-stats').classList.add('active'); }
             else { selectedId = id; renderOptions(); document.getElementById('sheet-add').classList.add('active'); }
+
+            document.getElementById('overlay').classList.add('active');
+            pushNewState({ sheet: true });
         }
 
         function closeAllSheets() {
-            document.getElementById('overlay').classList.remove('active');
-            document.querySelectorAll('.bottom-sheet').forEach(s => s.classList.remove('active'));
+            if (currentViewState.sheet) {
+                history.back();
+            } else {
+                document.getElementById('overlay').classList.remove('active');
+                document.querySelectorAll('.bottom-sheet').forEach(s => s.classList.remove('active'));
+            }
         }
 
         function confirmCreatePlaylist() { const n = document.getElementById('new-p-name').value; if(n){ playlists[n]=[]; save(); renderPlaylists(); closeAllSheets(); document.getElementById('new-p-name').value=""; } }
@@ -709,13 +756,15 @@
         }
         
         function openPlaylist(n) { 
-            currentOpenP = n; showPage('detail'); document.getElementById('detail-title').innerText=n; 
+            currentOpenP = n; 
+            document.getElementById('detail-title').innerText=n; 
             document.getElementById('play-all-btn').onclick = () => { if(playlists[n].length > 0) playFromP(0); };
             renderDetailGrid(); 
+            pushNewState({ page: 'detail' });
         }
         
         function removeSong(id, e) { e.stopPropagation(); playlists[currentOpenP] = playlists[currentOpenP].filter(i => i != id); save(); renderDetailGrid(); }
-        function deleteCurrentPlaylist() { if(confirm("Eliminare questa playlist?")){ delete playlists[currentOpenP]; save(); renderPlaylists(); showPage('library'); } }
+        function deleteCurrentPlaylist() { if(confirm("Eliminare questa playlist?")){ delete playlists[currentOpenP]; save(); renderPlaylists(); history.back(); } }
     </script>
 </body>
 </html>
