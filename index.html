@@ -289,7 +289,12 @@
     <!-- PLAYER FULL VIEW -->
     <div id="player-view">
         <i class="fal fa-chevron-down" onclick="history.back()" style="position: absolute; top: 40px; left: 25px; font-size: 1.5rem; cursor:pointer;"></i>
-        <i class="fal fa-download" id="p-download-btn" onclick="downloadCurrentSong()" style="position: absolute; top: 40px; right: 25px; font-size: 1.5rem; cursor:pointer; color:var(--primary-purple); background:rgba(255,255,255,0.05); padding:10px; border-radius:50%;"></i>
+        
+        <div style="position: absolute; top: 40px; right: 25px; display: flex; gap: 15px;">
+            <i class="fab fa-instagram" onclick="shareToInstagramStory()" style="font-size: 1.5rem; cursor:pointer; color: #e1306c; background:rgba(255,255,255,0.05); padding:10px; border-radius:50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"></i>
+            <i class="fal fa-download" id="p-download-btn" onclick="downloadCurrentSong()" style="font-size: 1.5rem; cursor:pointer; color:var(--primary-purple); background:rgba(255,255,255,0.05); padding:10px; border-radius:50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;"></i>
+        </div>
+
         <img id="p-img" class="p-album-art" src="">
         <h2 id="p-title" style="margin:25px 0 5px; text-align: center;"></h2>
         <p id="p-artist" style="color: var(--text-dim); margin-bottom: 20px;"></p>
@@ -783,6 +788,106 @@
             const a = document.createElement('a'); a.href = s.file;
             a.download = `${s.title} - ${s.artist}.mp3`;
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        }
+
+        // Funzione per generare l'immagine e condividere nelle Storie Instagram
+        async function shareToInstagramStory() {
+            if (isPlayingAd) return;
+            const song = activeQueue[currentIndex];
+            if (!song) return;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 1080;
+            canvas.height = 1920;
+            const ctx = canvas.getContext('2d');
+
+            // Sfondo con gradiente scuro / violaceo
+            const gradient = ctx.createLinearGradient(0, 0, 0, 1920);
+            gradient.addColorStop(0, '#1e1033');
+            gradient.addColorStop(0.5, '#0a0a0c');
+            gradient.addColorStop(1, '#050507');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 1080, 1920);
+
+            // Caricamento della copertina
+            const coverImg = new Image();
+            coverImg.crossOrigin = 'anonymous';
+            coverImg.src = song.img;
+
+            coverImg.onload = async () => {
+                // Glow/Ombra della copertina
+                ctx.save();
+                ctx.shadowColor = 'rgba(139, 92, 246, 0.4)';
+                ctx.shadowBlur = 60;
+                ctx.shadowOffsetY = 30;
+
+                // Disegno della copertina con angoli arrotondati (Square)
+                const x = 190, y = 380, size = 700, radius = 40;
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.arcTo(x + size, y, x + size, y + size, radius);
+                ctx.arcTo(x + size, y + size, x, y + size, radius);
+                ctx.arcTo(x, y + size, x, y, radius);
+                ctx.arcTo(x, y, x + size, y, radius);
+                ctx.closePath();
+                ctx.clip();
+                ctx.drawImage(coverImg, x, y, size, size);
+                ctx.restore();
+
+                // Card contenitore per le informazioni del brano
+                const cardX = 140, cardY = 1180, cardW = 800, cardH = 260, cardRadius = 30;
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.roundRect(cardX, cardY, cardW, cardH, cardRadius);
+                ctx.fill();
+                ctx.stroke();
+
+                // Titolo Brano
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 52px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                let titleText = song.title;
+                if (titleText.length > 22) titleText = titleText.substring(0, 20) + '...';
+                ctx.fillText(titleText, 540, 1270);
+
+                // Artista
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '500 38px Inter, sans-serif';
+                ctx.fillText(song.artist, 540, 1340);
+
+                // Branding / App Logo
+                ctx.fillStyle = '#8b5cf6';
+                ctx.font = 'bold 36px Inter, sans-serif';
+                ctx.fillText('PURPL3L3AN', 540, 1720);
+
+                ctx.fillStyle = '#64748b';
+                ctx.font = '400 24px Inter, sans-serif';
+                ctx.fillText('STAI ASCOLTANDO SU PURPL3L3AN', 540, 1765);
+
+                // Converti canvas in Blob e condividi
+                canvas.toBlob(async (blob) => {
+                    const file = new File([blob], 'story.png', { type: 'image/png' });
+                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                        try {
+                            await navigator.share({
+                                files: [file],
+                                title: song.title,
+                                text: `Sto ascoltando ${song.title} di ${song.artist} su Purpl3L3an!`
+                            });
+                        } catch (err) {
+                            console.log('Condivisione annullata o fallita:', err);
+                        }
+                    } else {
+                        // Fallback: Scarica l'immagine per condividerla manualmente
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = `story-${song.title}.png`;
+                        a.click();
+                    }
+                }, 'image/png');
+            };
         }
 
         function updateIcons(playing) {
