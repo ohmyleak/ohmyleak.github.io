@@ -448,7 +448,7 @@
 
     <script>
         const ALL_SONGS = [
-            { id: 0, title: 'Da zero', artist: 'Nayt', img: 'https://casadeldiscofaenza.it/wp-content/uploads/2025/01/71SP04tsQlL._UF10001000_QL80_.jpg', file: 'music/dazero.mp3' },
+            { id: 0, title: 'Da zero', artist: 'Nayt', img: 'https://i.scdn.co/image/ab67616d0000b2731179961da1f00ddadaf7ac74', file: 'music/dazero.mp3' },
             { id: 1, title: '!ly', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b2732f362ec65a3b674cdebd19e1', file: 'music/!ly.mp3' },
             { id: 2, title: 'molecole', artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000b2732f362ec65a3b674cdebd19e1', file: 'music/molecole.mp3' },
             { id: 3, title: 'Lulu (Acoustic Version)', artist: 'Nayt', img: 'https://i.scdn.co/image/ab67616d0000b2736600447524f7d66357f76a45', file: 'music/Lulu.mp3' },
@@ -790,8 +790,45 @@
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
         }
 
-        // Funzione per generare l'immagine e condividere nelle Storie Instagram
-        // Funzione per generare l'immagine e condividere nelle Storie Instagram
+        // Helper per caricare l'immagine via Fetch + Blob -> Base64 Data URL (supera il blocco Canvas CORS)
+        async function fetchImageAsBase64(url) {
+            const proxies = [
+                'https://api.allorigins.win/raw?url=',
+                'https://corsproxy.io/?'
+            ];
+
+            // 1. Prova prima il caricamento diretto (se locale o gia CORS-friendly)
+            try {
+                const res = await fetch(url, { mode: 'cors' });
+                if (res.ok) {
+                    const blob = await res.blob();
+                    return await blobToBase64(blob);
+                }
+            } catch (e) {}
+
+            // 2. Se fallisce, cicla sui Proxy CORS
+            for (const proxy of proxies) {
+                try {
+                    const res = await fetch(proxy + encodeURIComponent(url));
+                    if (res.ok) {
+                        const blob = await res.blob();
+                        return await blobToBase64(blob);
+                    }
+                } catch (e) {}
+            }
+            return null;
+        }
+
+        function blobToBase64(blob) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = () => resolve(null);
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        // Funzione corretta per generare la storia Instagram con la copertina dell'album
         async function shareToInstagramStory() {
             if (isPlayingAd) return;
             const song = activeQueue[currentIndex];
@@ -802,7 +839,7 @@
             canvas.height = 1920;
             const ctx = canvas.getContext('2d');
 
-            // Sfondo con gradiente scuro / violaceo
+            // 1. Sfondo con gradiente scuro
             const gradient = ctx.createLinearGradient(0, 0, 0, 1920);
             gradient.addColorStop(0, '#1e1033');
             gradient.addColorStop(0.5, '#0a0a0c');
@@ -810,87 +847,33 @@
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, 1080, 1920);
 
-            const drawCardAndShare = () => {
-                // Card contenitore per le informazioni del brano
-                const cardX = 140, cardY = 1180, cardW = 800, cardH = 260, cardRadius = 30;
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-                ctx.lineWidth = 2;
-                
-                // Disegno compatibile della card senza usare roundRect
-                ctx.beginPath();
-                ctx.moveTo(cardX + cardRadius, cardY);
-                ctx.arcTo(cardX + cardW, cardY, cardX + cardW, cardY + cardH, cardRadius);
-                ctx.arcTo(cardX + cardW, cardY + cardH, cardX, cardY + cardH, cardRadius);
-                ctx.arcTo(cardX, cardY + cardH, cardX, cardY, cardRadius);
-                ctx.arcTo(cardX, cardY, cardX + cardW, cardY, cardRadius);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
+            // 2. Scaricamento sicuro dell'immagine come Data URL Base64
+            const isRemote = song.img.startsWith('http://') || song.img.startsWith('https://');
+            let imageSrc = song.img;
 
-                // Titolo Brano
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 52px Inter, sans-serif';
-                ctx.textAlign = 'center';
-                let titleText = song.title;
-                if (titleText.length > 22) titleText = titleText.substring(0, 20) + '...';
-                ctx.fillText(titleText, 540, 1270);
+            if (isRemote) {
+                const base64Data = await fetchImageAsBase64(song.img);
+                if (base64Data) imageSrc = base64Data;
+            }
 
-                // Artista
-                ctx.fillStyle = '#94a3b8';
-                ctx.font = '500 38px Inter, sans-serif';
-                ctx.fillText(song.artist, 540, 1340);
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
 
-                // Branding / App Logo
-                ctx.fillStyle = '#8b5cf6';
-                ctx.font = 'bold 36px Inter, sans-serif';
-                ctx.fillText('PURPL3L3AN', 540, 1720);
+            await new Promise((resolve) => {
+                img.onload = resolve;
+                img.onerror = resolve;
+                img.src = imageSrc;
+            });
 
-                ctx.fillStyle = '#64748b';
-                ctx.font = '400 24px Inter, sans-serif';
-                ctx.fillText('STAI ASCOLTANDO SU PURPL3L3AN', 540, 1765);
-
-                // Converti canvas in Blob e condividi
-                canvas.toBlob(async (blob) => {
-                    if (!blob) {
-                        alert("Errore nella generazione della storia.");
-                        return;
-                    }
-                    const file = new File([blob], 'story.png', { type: 'image/png' });
-                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                        try {
-                            await navigator.share({
-                                files: [file],
-                                title: song.title,
-                                text: `Sto ascoltando ${song.title} di ${song.artist} su Purpl3L3an!`
-                            });
-                        } catch (err) {
-                            console.log('Condivisione annullata o fallita:', err);
-                        }
-                    } else {
-                        // Fallback: Scarica l'immagine per condividerla manualmente
-                        const a = document.createElement('a');
-                        a.href = URL.createObjectURL(blob);
-                        a.download = `story-${song.title}.png`;
-                        a.click();
-                    }
-                }, 'image/png');
-            };
-
-            // Caricamento della copertina con gestione errori CORS
-            const coverImg = new Image();
-            coverImg.crossOrigin = 'anonymous';
-            // Usa un proxy CORS per permettere al Canvas di esportare l'immagine in sicurezza
-            coverImg.src = 'https://corsproxy.io/?' + encodeURIComponent(song.img);
-
-            coverImg.onload = () => {
+            // 3. Disegno della Copertina (se caricata correttamente)
+            if (img.complete && img.naturalWidth !== 0) {
                 try {
                     ctx.save();
                     ctx.shadowColor = 'rgba(139, 92, 246, 0.4)';
                     ctx.shadowBlur = 60;
                     ctx.shadowOffsetY = 30;
 
-                    const x = 190, y = 380, size = 700, radius = 40;
+                    const x = 190, y = 320, size = 700, radius = 40;
                     ctx.beginPath();
                     ctx.moveTo(x + radius, y);
                     ctx.arcTo(x + size, y, x + size, y + size, radius);
@@ -899,18 +882,73 @@
                     ctx.arcTo(x, y, x + size, y, radius);
                     ctx.closePath();
                     ctx.clip();
-                    ctx.drawImage(coverImg, x, y, size, size);
+                    ctx.drawImage(img, x, y, size, size);
                     ctx.restore();
                 } catch (e) {
-                    console.warn("Impossibile applicare la copertina a causa di restrizioni CORS:", e);
+                    console.warn("Impossibile applicare la copertina al canvas:", e);
                 }
-                drawCardAndShare();
-            };
+            }
 
-            coverImg.onerror = () => {
-                // Se la copertina fallisce, genera comunque la storia senza di essa
-                drawCardAndShare();
-            };
+            // 4. Card contenitore per il testo (sotto la copertina)
+            const cardX = 140, cardY = 1120, cardW = 800, cardH = 260, cardRadius = 30;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 2;
+            
+            ctx.beginPath();
+            ctx.moveTo(cardX + cardRadius, cardY);
+            ctx.arcTo(cardX + cardW, cardY, cardX + cardW, cardY + cardH, cardRadius);
+            ctx.arcTo(cardX + cardW, cardY + cardH, cardX, cardY + cardH, cardRadius);
+            ctx.arcTo(cardX, cardY + cardH, cardX, cardY, cardRadius);
+            ctx.arcTo(cardX, cardY, cardX + cardW, cardY, cardRadius);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // 5. Testi (Titolo, Artista e Branding)
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 52px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            let titleText = song.title;
+            if (titleText.length > 22) titleText = titleText.substring(0, 20) + '...';
+            ctx.fillText(titleText, 540, 1210);
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '500 38px Inter, sans-serif';
+            ctx.fillText(song.artist, 540, 1280);
+
+            ctx.fillStyle = '#8b5cf6';
+            ctx.font = 'bold 36px Inter, sans-serif';
+            ctx.fillText('PURPL3L3AN', 540, 1680);
+
+            ctx.fillStyle = '#64748b';
+            ctx.font = '400 24px Inter, sans-serif';
+            ctx.fillText('STAI ASCOLTANDO SU PURPL3L3AN', 540, 1725);
+
+            // 6. Generazione file e Condivisione
+            canvas.toBlob(async (blob) => {
+                if (!blob) {
+                    alert("Errore nella generazione della storia.");
+                    return;
+                }
+                const file = new File([blob], 'story.png', { type: 'image/png' });
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try {
+                        await navigator.share({
+                            files: [file],
+                            title: song.title,
+                            text: `Sto ascoltando ${song.title} di ${song.artist} su Purpl3L3an!`
+                        });
+                    } catch (err) {
+                        console.log('Condivisione annullata o fallita:', err);
+                    }
+                } else {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `story-${song.title}.png`;
+                    a.click();
+                }
+            }, 'image/png');
         }
 
         function updateIcons(playing) {
