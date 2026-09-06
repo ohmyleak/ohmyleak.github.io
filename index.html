@@ -791,6 +791,7 @@
         }
 
         // Funzione per generare l'immagine e condividere nelle Storie Instagram
+        // Funzione per generare l'immagine e condividere nelle Storie Instagram
         async function shareToInstagramStory() {
             if (isPlayingAd) return;
             const song = activeQueue[currentIndex];
@@ -809,38 +810,21 @@
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, 1080, 1920);
 
-            // Caricamento della copertina
-            const coverImg = new Image();
-            coverImg.crossOrigin = 'anonymous';
-            coverImg.src = song.img;
-
-            coverImg.onload = async () => {
-                // Glow/Ombra della copertina
-                ctx.save();
-                ctx.shadowColor = 'rgba(139, 92, 246, 0.4)';
-                ctx.shadowBlur = 60;
-                ctx.shadowOffsetY = 30;
-
-                // Disegno della copertina con angoli arrotondati (Square)
-                const x = 190, y = 380, size = 700, radius = 40;
-                ctx.beginPath();
-                ctx.moveTo(x + radius, y);
-                ctx.arcTo(x + size, y, x + size, y + size, radius);
-                ctx.arcTo(x + size, y + size, x, y + size, radius);
-                ctx.arcTo(x, y + size, x, y, radius);
-                ctx.arcTo(x, y, x + size, y, radius);
-                ctx.closePath();
-                ctx.clip();
-                ctx.drawImage(coverImg, x, y, size, size);
-                ctx.restore();
-
+            const drawCardAndShare = () => {
                 // Card contenitore per le informazioni del brano
                 const cardX = 140, cardY = 1180, cardW = 800, cardH = 260, cardRadius = 30;
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
                 ctx.lineWidth = 2;
+                
+                // Disegno compatibile della card senza usare roundRect
                 ctx.beginPath();
-                ctx.roundRect(cardX, cardY, cardW, cardH, cardRadius);
+                ctx.moveTo(cardX + cardRadius, cardY);
+                ctx.arcTo(cardX + cardW, cardY, cardX + cardW, cardY + cardH, cardRadius);
+                ctx.arcTo(cardX + cardW, cardY + cardH, cardX, cardY + cardH, cardRadius);
+                ctx.arcTo(cardX, cardY + cardH, cardX, cardY, cardRadius);
+                ctx.arcTo(cardX, cardY, cardX + cardW, cardY, cardRadius);
+                ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
 
@@ -868,6 +852,10 @@
 
                 // Converti canvas in Blob e condividi
                 canvas.toBlob(async (blob) => {
+                    if (!blob) {
+                        alert("Errore nella generazione della storia.");
+                        return;
+                    }
                     const file = new File([blob], 'story.png', { type: 'image/png' });
                     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
                         try {
@@ -887,6 +875,41 @@
                         a.click();
                     }
                 }, 'image/png');
+            };
+
+            // Caricamento della copertina con gestione errori CORS
+            const coverImg = new Image();
+            coverImg.crossOrigin = 'anonymous';
+            // Usa un proxy CORS per permettere al Canvas di esportare l'immagine in sicurezza
+            coverImg.src = 'https://corsproxy.io/?' + encodeURIComponent(song.img);
+
+            coverImg.onload = () => {
+                try {
+                    ctx.save();
+                    ctx.shadowColor = 'rgba(139, 92, 246, 0.4)';
+                    ctx.shadowBlur = 60;
+                    ctx.shadowOffsetY = 30;
+
+                    const x = 190, y = 380, size = 700, radius = 40;
+                    ctx.beginPath();
+                    ctx.moveTo(x + radius, y);
+                    ctx.arcTo(x + size, y, x + size, y + size, radius);
+                    ctx.arcTo(x + size, y + size, x, y + size, radius);
+                    ctx.arcTo(x, y + size, x, y, radius);
+                    ctx.arcTo(x, y, x + size, y, radius);
+                    ctx.closePath();
+                    ctx.clip();
+                    ctx.drawImage(coverImg, x, y, size, size);
+                    ctx.restore();
+                } catch (e) {
+                    console.warn("Impossibile applicare la copertina a causa di restrizioni CORS:", e);
+                }
+                drawCardAndShare();
+            };
+
+            coverImg.onerror = () => {
+                // Se la copertina fallisce, genera comunque la storia senza di essa
+                drawCardAndShare();
             };
         }
 
