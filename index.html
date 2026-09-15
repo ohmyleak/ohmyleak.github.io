@@ -12,6 +12,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
     <style>
         :root {
             --bg-dark: #08070c;
@@ -933,11 +937,18 @@
             
             // Registrazione Service Worker per PWA
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(() => console.log("Service Worker Registrato"))
-                    .catch(err => console.log("SW Errore:", err));
+                navigator.serviceWorker.register('./sw.js').then((reg) => {
+                    reg.addEventListener('updatefound', () => {
+                        const newWorker = reg.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // Ricarica la pagina appena il nuovo Service Worker è pronto
+                                window.location.reload();
+                            }
+                        });
+                    });
+                }).catch(err => console.log("SW Errore:", err));
             }
-
             audio.ontimeupdate = () => {
                 if (!audio.duration || isNaN(audio.duration)) return;
                 const pct = (audio.currentTime / audio.duration) * 100;
