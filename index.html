@@ -983,6 +983,21 @@
 
         const audio = document.getElementById('audio-engine');
 
+        function showLoadingState() {
+            document.getElementById('m-play-icon').className = 'fas fa-spinner fa-spin';
+            document.getElementById('p-play-icon').className = 'fas fa-spinner fa-spin';
+        }
+
+        function showPlayingState() {
+            document.getElementById('m-play-icon').className = 'fas fa-pause';
+            document.getElementById('p-play-icon').className = 'fas fa-pause';
+        }
+
+        function showPausedState() {
+            document.getElementById('m-play-icon').className = 'fas fa-play';
+            document.getElementById('p-play-icon').className = 'fas fa-play';
+        }
+
         function initAudioContext() {
             if (!audioCtx) {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -1046,6 +1061,14 @@
                     });
                 }).catch(err => console.log("SW Errore:", err));
             }
+
+            audio.onloadstart = () => showLoadingState();
+            audio.onwaiting = () => showLoadingState();
+            audio.oncanplay = () => {
+                if (!audio.paused) showPlayingState();
+            };
+            audio.onplaying = () => showPlayingState();
+            audio.onpause = () => showPausedState();
 
             audio.ontimeupdate = () => {
                 if (!audio.duration || isNaN(audio.duration)) return;
@@ -1305,6 +1328,7 @@
                 img: song ? song.img : ''
             });
 
+            showLoadingState();
             audio.src = AD_AUDIO_URL;
             audio.play().catch(e => console.log("Autoplay bloccato:", e));
         }
@@ -1315,6 +1339,7 @@
             if (!song) return;
 
             updatePlayerUI(song);
+            showLoadingState();
             audio.src = song.file;
             audio.play().catch(e => console.log("Autoplay bloccato:", e));
             
@@ -1343,20 +1368,13 @@
             document.getElementById('p-title').innerText = data.title;
             document.getElementById('p-artist').innerText = data.artist;
             document.getElementById('p-img').src = data.img;
-
-            document.getElementById('m-play-icon').className = 'fas fa-pause';
-            document.getElementById('p-play-icon').className = 'fas fa-pause';
         }
 
         function togglePlay() {
             if (audio.paused) {
                 audio.play();
-                document.getElementById('m-play-icon').className = 'fas fa-pause';
-                document.getElementById('p-play-icon').className = 'fas fa-pause';
             } else {
                 audio.pause();
-                document.getElementById('m-play-icon').className = 'fas fa-play';
-                document.getElementById('p-play-icon').className = 'fas fa-play';
             }
         }
 
