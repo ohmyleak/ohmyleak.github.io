@@ -1,4 +1,4 @@
-const CACHE_NAME = 'purpl3l3an-cache-v8'; // Aggiornato la versione per forzare il refresh
+const CACHE_NAME = 'purpl3l3an-cache-v9'; // Aggiornato la versione per forzare il refresh
 
 // 1. Elenco di TUTTI i file di sistema e della grafica
 const STATIC_ASSETS = [
