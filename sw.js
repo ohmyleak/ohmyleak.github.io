@@ -1,4 +1,4 @@
-const CACHE_NAME = 'purpl3l3an-cache-v4'; // Cambiato versione per forzare l'aggiornamento
+const CACHE_NAME = 'purpl3l3an-cache-v5'; // Cambiato versione per forzare l'aggiornamento
 
 const STATIC_ASSETS = [
     './',
