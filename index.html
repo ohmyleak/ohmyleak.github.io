@@ -338,7 +338,6 @@
     </nav>
 
     <script type="module">
-        // Importa Firebase SDKs
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
             getAuth, 
@@ -348,6 +347,19 @@
             signInWithPopup,
             signInWithRedirect
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            setDoc, 
+            onSnapshot 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { 
+            getStorage, 
+            ref, 
+            uploadBytes, 
+            getDownloadURL, 
+            deleteObject 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
         // CONFIGURAZIONE FIREBASE
         const firebaseConfig = {
@@ -359,24 +371,23 @@
             appId: "1:707340195061:web:a000faf4da590bf2a7a1bc"
         };
 
-        // Inizializza Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
         const googleProvider = new GoogleAuthProvider();
 
         let currentUser = null;
+        let unsubscribeUserDoc = null;
 
-        // Renderizza l'avatar tenendo conto sia della foto Firebase/Google che di quella personalizzata salvata in localStorage
-        window.renderUserAvatar = function(user) {
+        window.renderUserAvatar = function(user, customAvatarUrl = null) {
             const avatarBox = document.getElementById('acc-avatar-box');
             const removeBtn = document.getElementById('remove-avatar-btn');
             
-            const customAvatar = localStorage.getItem(`custom_avatar_${user.uid}`);
-            
-            if (customAvatar) {
-                avatarBox.innerHTML = `<img src="${customAvatar}" alt="Avatar">`;
+            if (customAvatarUrl) {
+                avatarBox.innerHTML = `<img src="${customAvatarUrl}" alt="Avatar">`;
                 if(removeBtn) removeBtn.classList.remove('hidden');
-            } else if (user.photoURL) {
+            } else if (user && user.photoURL) {
                 avatarBox.innerHTML = `<img src="${user.photoURL}" alt="Avatar">`;
                 if(removeBtn) removeBtn.classList.add('hidden');
             } else {
@@ -385,49 +396,90 @@
             }
         };
 
-        // Gestione scelta avatar da galleria
         window.triggerAvatarUpload = function() {
             document.getElementById('avatar-input').click();
         };
 
-        window.handleAvatarUpload = function(event) {
+        // Caricamento Foto Profilo su Firebase Storage & Firestore
+        window.handleAvatarUpload = async function(event) {
             const file = event.target.files[0];
             if (!file || !currentUser) return;
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const base64Image = e.target.result;
-                localStorage.setItem(`custom_avatar_${currentUser.uid}`, base64Image);
-                window.renderUserAvatar(currentUser);
-            };
-            reader.readAsDataURL(file);
+            try {
+                const avatarRef = ref(storage, `avatars/${currentUser.uid}`);
+                await uploadBytes(avatarRef, file);
+                const downloadURL = await getDownloadURL(avatarRef);
+
+                await setDoc(doc(db, "users", currentUser.uid), {
+                    customAvatarURL: downloadURL
+                }, { merge: true });
+            } catch (error) {
+                alert("Errore durante il caricamento della foto: " + error.message);
+            }
         };
 
-        window.removeCustomAvatar = function() {
+        window.removeCustomAvatar = async function() {
             if (!currentUser) return;
-            localStorage.removeItem(`custom_avatar_${currentUser.uid}`);
-            window.renderUserAvatar(currentUser);
+            try {
+                const avatarRef = ref(storage, `avatars/${currentUser.uid}`);
+                await deleteObject(avatarRef).catch(() => {});
+
+                await setDoc(doc(db, "users", currentUser.uid), {
+                    customAvatarURL: null
+                }, { merge: true });
+            } catch (error) {
+                alert("Errore nella rimozione: " + error.message);
+            }
         };
 
-        // Monitora lo stato dell'utente loggato
+        // Salvataggio Playlist su Cloud Firestore
+        window.savePlaylistsToCloud = async function() {
+            if (!currentUser) return;
+            try {
+                await setDoc(doc(db, "users", currentUser.uid), {
+                    playlists: window.playlists
+                }, { merge: true });
+            } catch (error) {
+                console.error("Errore salvataggio playlist su cloud:", error);
+            }
+        };
+
+        // Ascolto in tempo reale dei dati dell'utente da Firestore
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 currentUser = user;
                 document.getElementById('acc-email').innerText = user.email;
                 document.getElementById('acc-username').innerText = user.displayName || user.email.split('@')[0];
-                
-                window.renderUserAvatar(user);
 
                 document.getElementById('account-logged-in').classList.remove('hidden');
                 document.getElementById('account-auth-form').classList.add('hidden');
+
+                if (unsubscribeUserDoc) unsubscribeUserDoc();
+
+                const userDocRef = doc(db, "users", user.uid);
+                unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        
+                        if (data.playlists) {
+                            window.playlists = data.playlists;
+                            localStorage.setItem('myPlaylists', JSON.stringify(window.playlists));
+                            if (window.renderPlaylists) window.renderPlaylists();
+                        }
+                        
+                        window.renderUserAvatar(user, data.customAvatarURL || null);
+                    } else {
+                        window.renderUserAvatar(user, null);
+                    }
+                });
             } else {
+                if (unsubscribeUserDoc) unsubscribeUserDoc();
                 currentUser = null;
                 document.getElementById('account-logged-in').classList.add('hidden');
                 document.getElementById('account-auth-form').classList.remove('hidden');
             }
         });
 
-        // Gestione Login con Google
         window.handleGoogleLogin = function() {
             signInWithPopup(auth, googleProvider)
                 .catch((error) => {
@@ -527,7 +579,7 @@
             'OMNI I': { artist: 'Thasup', img: 'https://i.scdn.co/image/ab67616d0000e1a34fa78b565f58cfc9cd161d1f', tracks: ['396', '417', '528', '639', '741', '852', '963'] }
         };
 
-        let playlists = JSON.parse(localStorage.getItem('myPlaylists')) || {};
+        window.playlists = JSON.parse(localStorage.getItem('myPlaylists')) || {};
         let playCounts = JSON.parse(localStorage.getItem('playCounts')) || {};
 
         let adsEnabled = JSON.parse(localStorage.getItem('adsEnabled')) ?? true;
@@ -539,6 +591,30 @@
         const audio = document.getElementById('audio-engine');
 
         let currentViewState = { page: 'home', player: false, sheet: false };
+
+        window.save = function() {
+            localStorage.setItem('myPlaylists', JSON.stringify(window.playlists));
+            if (window.savePlaylistsToCloud) {
+                window.savePlaylistsToCloud();
+            }
+        };
+
+        window.renderPlaylists = function() {
+            const container = document.getElementById('playlist-list');
+            if(!container) return;
+            container.innerHTML = Object.keys(window.playlists).map(name => `
+                <div class="album-list-item" onclick="openPlaylist('${name}')">
+                    <div style="display:flex; align-items:center;">
+                        <i class="fas fa-list" style="color:var(--primary-purple); font-size:1.2rem; margin-right:15px;"></i>
+                        <div>
+                            <p style="margin:0; font-weight:bold;">${name}</p>
+                            <p style="margin:0; font-size:0.75rem; color:var(--text-dim);">${window.playlists[name].length} canzoni</p>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right" style="color:var(--text-dim)"></i>
+                </div>
+            `).join('');
+        };
 
         window.onpopstate = function(event) {
             const state = event.state;
@@ -589,6 +665,32 @@
                     .then(reg => console.log('Service Worker Registrato con successo!', reg))
                     .catch(err => console.log('Errore nella registrazione del SW:', err));
             }
+        }
+
+        function renderHome(songs) {
+            document.getElementById('home-grid').innerHTML = songs.map(s => `
+                <div class="music-card" onclick="playSingleSong(${s.id})">
+                    <button class="card-btn add-btn" onclick="event.stopPropagation(); openSheet('add', ${s.id})"><i class="fas fa-plus"></i></button>
+                    <img src="${s.img}">
+                    <p style="margin:10px 0 0; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${s.title}</p>
+                    <p style="margin:2px 0 0; font-size:0.75rem; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${s.artist}</p>
+                </div>
+            `).join('');
+        }
+
+        function filterHome(query) {
+            const q = query.toLowerCase();
+            const filtered = ALL_SONGS.filter(s => s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q));
+            renderHome(filtered);
+        }
+
+        function playSingleSong(id) {
+            const s = ALL_SONGS.find(item => item.id === id);
+            if (!s) return;
+            activeQueue = [s];
+            currentIndex = 0;
+            isPlayingAd = false;
+            startPlayback();
         }
 
         function showPage(p) {
@@ -665,8 +767,25 @@
             openSheet('add', song.id);
         }
 
+        function openSheet(type, songId = null) {
+            selectedId = songId;
+            if (type === 'add') renderOptions();
+            if (type === 'stats') renderStats();
+            document.getElementById('overlay').classList.add('active');
+            document.getElementById(`sheet-${type}`).classList.add('active');
+            pushNewState({ sheet: true });
+        }
+
+        function closeAllSheets() {
+            document.getElementById('overlay').classList.remove('active');
+            document.querySelectorAll('.bottom-sheet').forEach(s => s.classList.remove('active'));
+            if (currentViewState.sheet) {
+                history.back();
+            }
+        }
+
         function renderOptions() {
-            document.getElementById('playlist-options').innerHTML = Object.keys(playlists).map(name => `
+            document.getElementById('playlist-options').innerHTML = Object.keys(window.playlists).map(name => `
                 <div style="padding:15px; background:rgba(255,255,255,0.05); border-radius:12px; margin-bottom:10px; cursor:pointer;" onclick="confirmAdd('${name}')">${name}</div>
             `).join('') || "Crea una playlist in libreria";
         }
@@ -680,16 +799,38 @@
                 }
             }
 
-            if(!playlists[n].includes(selectedId)) {
-                playlists[n].push(selectedId);
-                save();
+            if(!window.playlists[n].includes(selectedId)) {
+                window.playlists[n].push(selectedId);
+                window.save();
             }
             closeAllSheets();
             selectedTempSong = null;
         }
 
+        function confirmCreatePlaylist() {
+            const input = document.getElementById('new-p-name');
+            const name = input.value.trim();
+            if (name) {
+                if (!window.playlists[name]) {
+                    window.playlists[name] = [];
+                    window.save();
+                    renderPlaylists();
+                }
+                input.value = '';
+                closeAllSheets();
+            }
+        }
+
+        function openPlaylist(name) {
+            currentOpenP = name;
+            document.getElementById('detail-title').innerText = name;
+            document.getElementById('play-all-btn').onclick = () => { if(window.playlists[name].length > 0) playFromP(0); };
+            renderDetailGrid();
+            pushNewState({ page: 'detail' });
+        }
+
         function renderDetailGrid() {
-            const songs = playlists[currentOpenP].map(id => ALL_SONGS.find(s => s.id === id)).filter(s => s !== undefined);
+            const songs = window.playlists[currentOpenP].map(id => ALL_SONGS.find(s => s.id === id)).filter(s => s !== undefined);
             
             document.getElementById('detail-grid').innerHTML = songs.map((s, idx) => `
                 <div class="music-card" onclick="playFromP(${idx})">
@@ -699,8 +840,24 @@
             `).join('');
         }
 
+        function removeSong(id, event) {
+            event.stopPropagation();
+            window.playlists[currentOpenP] = window.playlists[currentOpenP].filter(songId => songId !== id);
+            window.save();
+            renderDetailGrid();
+        }
+
+        function deleteCurrentPlaylist() {
+            if (confirm(`Vuoi cancellare la playlist "${currentOpenP}"?`)) {
+                delete window.playlists[currentOpenP];
+                window.save();
+                renderPlaylists();
+                history.back();
+            }
+        }
+
         function playFromP(idx) {
-            activeQueue = playlists[currentOpenP].map(id => ALL_SONGS.find(s => s.id === id)).filter(s => s !== undefined);
+            activeQueue = window.playlists[currentOpenP].map(id => ALL_SONGS.find(s => s.id === id)).filter(s => s !== undefined);
             currentIndex = idx;
             isPlayingAd = false;
             startPlayback();
@@ -781,6 +938,83 @@
             document.getElementById('p-next-btn').style.opacity = disabled ? '0.3' : '1';
         }
 
+        function togglePlay() {
+            if (audio.paused) {
+                audio.play();
+                updateIcons(true);
+            } else {
+                audio.pause();
+                updateIcons(false);
+            }
+        }
+
+        function updateIcons(playing) {
+            document.getElementById('p-play-icon').className = playing ? "fas fa-pause" : "fas fa-play";
+            document.getElementById('m-play-icon').className = playing ? "fas fa-pause" : "fas fa-play";
+        }
+
+        function nextSong() {
+            if (isPlayingAd) return;
+            songsPlayedCount++;
+            if (adsEnabled && songsPlayedCount >= adFrequency) {
+                songsPlayedCount = 0;
+                playAd();
+            } else {
+                nextSongAfterAd();
+            }
+        }
+
+        function nextSongAfterAd() {
+            if (isShuffle) {
+                currentIndex = Math.floor(Math.random() * activeQueue.length);
+            } else {
+                currentIndex = (currentIndex + 1) % activeQueue.length;
+            }
+            startPlayback();
+        }
+
+        function prevSong() {
+            if (isPlayingAd) return;
+            currentIndex = (currentIndex - 1 + activeQueue.length) % activeQueue.length;
+            startPlayback();
+        }
+
+        function toggleShuffle() {
+            isShuffle = !isShuffle;
+            document.getElementById('shuffle-btn').classList.toggle('active-mode', isShuffle);
+        }
+
+        function toggleLoop() {
+            audio.loop = !audio.loop;
+            document.getElementById('loop-btn').classList.toggle('active-mode', audio.loop);
+        }
+
+        audio.ontimeupdate = () => {
+            if (audio.duration) {
+                const pct = (audio.currentTime / audio.duration) * 100;
+                document.getElementById('progress-bar').style.width = pct + '%';
+            }
+        };
+
+        audio.onended = () => {
+            if (isPlayingAd) {
+                nextSongAfterAd();
+            } else {
+                nextSong();
+            }
+        };
+
+        function startSeek(e) {
+            const container = document.getElementById('progress-container');
+            const rect = container.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clickX = clientX - rect.left;
+            const width = rect.width;
+            if (audio.duration) {
+                audio.currentTime = (clickX / width) * audio.duration;
+            }
+        }
+
         function downloadCurrentSong() {
             if(isPlayingAd) return;
             const s = activeQueue[currentIndex];
@@ -790,14 +1024,12 @@
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
         }
 
-        // Helper per caricare l'immagine via Fetch + Blob -> Base64 Data URL (supera il blocco Canvas CORS)
         async function fetchImageAsBase64(url) {
             const proxies = [
                 'https://api.allorigins.win/raw?url=',
                 'https://corsproxy.io/?'
             ];
 
-            // 1. Prova prima il caricamento diretto (se locale o gia CORS-friendly)
             try {
                 const res = await fetch(url, { mode: 'cors' });
                 if (res.ok) {
@@ -806,7 +1038,6 @@
                 }
             } catch (e) {}
 
-            // 2. Se fallisce, cicla sui Proxy CORS
             for (const proxy of proxies) {
                 try {
                     const res = await fetch(proxy + encodeURIComponent(url));
@@ -828,7 +1059,6 @@
             });
         }
 
-        // Funzione corretta per generare la storia Instagram con la copertina dell'album
         async function shareToInstagramStory() {
             if (isPlayingAd) return;
             const song = activeQueue[currentIndex];
@@ -839,7 +1069,6 @@
             canvas.height = 1920;
             const ctx = canvas.getContext('2d');
 
-            // 1. Sfondo con gradiente scuro
             const gradient = ctx.createLinearGradient(0, 0, 0, 1920);
             gradient.addColorStop(0, '#1e1033');
             gradient.addColorStop(0.5, '#0a0a0c');
@@ -847,7 +1076,6 @@
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, 1080, 1920);
 
-            // 2. Scaricamento sicuro dell'immagine come Data URL Base64
             const isRemote = song.img.startsWith('http://') || song.img.startsWith('https://');
             let imageSrc = song.img;
 
@@ -865,221 +1093,52 @@
                 img.src = imageSrc;
             });
 
-            // 3. Disegno della Copertina (se caricata correttamente)
-            if (img.complete && img.naturalWidth !== 0) {
-                try {
-                    ctx.save();
-                    ctx.shadowColor = 'rgba(139, 92, 246, 0.4)';
-                    ctx.shadowBlur = 60;
-                    ctx.shadowOffsetY = 30;
-
-                    const x = 190, y = 320, size = 700, radius = 40;
-                    ctx.beginPath();
-                    ctx.moveTo(x + radius, y);
-                    ctx.arcTo(x + size, y, x + size, y + size, radius);
-                    ctx.arcTo(x + size, y + size, x, y + size, radius);
-                    ctx.arcTo(x, y + size, x, y, radius);
-                    ctx.arcTo(x, y, x + size, y, radius);
-                    ctx.closePath();
-                    ctx.clip();
-                    ctx.drawImage(img, x, y, size, size);
-                    ctx.restore();
-                } catch (e) {
-                    console.warn("Impossibile applicare la copertina al canvas:", e);
-                }
-            }
-
-            // 4. Card contenitore per il testo (sotto la copertina)
-            const cardX = 140, cardY = 1120, cardW = 800, cardH = 260, cardRadius = 30;
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-            ctx.lineWidth = 2;
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.6)';
+            ctx.shadowBlur = 40;
+            ctx.shadowOffsetY = 20;
+            
+            const artSize = 700;
+            const artX = (1080 - artSize) / 2;
+            const artY = 400;
             
             ctx.beginPath();
-            ctx.moveTo(cardX + cardRadius, cardY);
-            ctx.arcTo(cardX + cardW, cardY, cardX + cardW, cardY + cardH, cardRadius);
-            ctx.arcTo(cardX + cardW, cardY + cardH, cardX, cardY + cardH, cardRadius);
-            ctx.arcTo(cardX, cardY + cardH, cardX, cardY, cardRadius);
-            ctx.arcTo(cardX, cardY, cardX + cardW, cardY, cardRadius);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
+            ctx.roundRect(artX, artY, artSize, artSize, 40);
+            ctx.clip();
+            ctx.drawImage(img, artX, artY, artSize, artSize);
+            ctx.restore();
 
-            // 5. Testi (Titolo, Artista e Branding)
             ctx.fillStyle = '#ffffff';
             ctx.font = 'bold 52px Inter, sans-serif';
             ctx.textAlign = 'center';
-            let titleText = song.title;
-            if (titleText.length > 22) titleText = titleText.substring(0, 20) + '...';
-            ctx.fillText(titleText, 540, 1210);
+            ctx.fillText(song.title, 540, 1220);
 
             ctx.fillStyle = '#94a3b8';
-            ctx.font = '500 38px Inter, sans-serif';
+            ctx.font = '36px Inter, sans-serif';
             ctx.fillText(song.artist, 540, 1280);
 
             ctx.fillStyle = '#8b5cf6';
-            ctx.font = 'bold 36px Inter, sans-serif';
-            ctx.fillText('PURPL3L3AN', 540, 1680);
+            ctx.font = 'bold 32px Inter, sans-serif';
+            ctx.fillText('Purpl3L3an', 540, 1750);
 
-            ctx.fillStyle = '#64748b';
-            ctx.font = '400 24px Inter, sans-serif';
-            ctx.fillText('STAI ASCOLTANDO SU PURPL3L3AN', 540, 1725);
-
-            // 6. Generazione file e Condivisione
-            canvas.toBlob(async (blob) => {
-                if (!blob) {
-                    alert("Errore nella generazione della storia.");
-                    return;
-                }
+            canvas.toBlob((blob) => {
+                if (!blob) return;
                 const file = new File([blob], 'story.png', { type: 'image/png' });
-                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                    try {
-                        await navigator.share({
-                            files: [file],
-                            title: song.title,
-                            text: `Sto ascoltando ${song.title} di ${song.artist} su Purpl3L3an!`
-                        });
-                    } catch (err) {
-                        console.log('Condivisione annullata o fallita:', err);
-                    }
+
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    navigator.share({
+                        files: [file],
+                        title: song.title,
+                        text: `Sto ascoltando ${song.title} su Purpl3L3an`
+                    }).catch(() => {});
                 } else {
                     const a = document.createElement('a');
                     a.href = URL.createObjectURL(blob);
-                    a.download = `story-${song.title}.png`;
+                    a.download = 'purpl3l3an-story.png';
                     a.click();
                 }
             }, 'image/png');
         }
-
-        function updateIcons(playing) {
-            const icon = playing ? "fas fa-pause" : "fas fa-play";
-            document.getElementById('p-play-icon').className = icon;
-            document.getElementById('m-play-icon').className = icon;
-        }
-
-        function togglePlay() {
-            if (audio.paused) { audio.play(); updateIcons(true); }
-            else { audio.pause(); updateIcons(false); }
-        }
-
-        function playSingle(id) { 
-            const s = ALL_SONGS.find(s => s.id === id);
-            if(s) { activeQueue = [s]; currentIndex = 0; isPlayingAd = false; startPlayback(); }
-        }
-
-        function nextSong() {
-            if (activeQueue.length === 0) return;
-            if (isShuffle && activeQueue.length > 1) {
-                let nextIndex; do { nextIndex = Math.floor(Math.random() * activeQueue.length); } while (nextIndex === currentIndex);
-                currentIndex = nextIndex;
-            } else { currentIndex = (currentIndex + 1) % activeQueue.length; }
-            startPlayback();
-        }
-
-        function nextSongAfterAd() {
-            currentIndex = (currentIndex + 1) % activeQueue.length;
-            startPlayback();
-        }
-
-        function prevSong() { 
-            if(isPlayingAd) return;
-            currentIndex = (currentIndex - 1 + activeQueue.length) % activeQueue.length; 
-            startPlayback(); 
-        }
-
-        function toggleShuffle() { isShuffle = !isShuffle; document.getElementById('shuffle-btn').classList.toggle('active-mode', isShuffle); }
-        function toggleLoop() { audio.loop = !audio.loop; document.getElementById('loop-btn').classList.toggle('active-mode'); }
-
-        audio.ontimeupdate = () => {
-            if (!audio.duration) return;
-            const p = (audio.currentTime / audio.duration) * 100;
-            document.getElementById('progress-bar').style.width = p + "%";
-        };
-
-        function startSeek(e) {
-            if (isPlayingAd) return;
-            const rect = document.getElementById('progress-container').getBoundingClientRect();
-            const updateSeek = (clientX) => {
-                const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
-                audio.currentTime = (x / rect.width) * audio.duration;
-            };
-            const move = (ev) => updateSeek(ev.touches ? ev.touches[0].clientX : ev.clientX);
-            const end = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', end); document.removeEventListener('touchmove', move); document.removeEventListener('touchend', end); };
-            updateSeek(e.touches ? e.touches[0].clientX : e.clientX);
-            document.addEventListener('mousemove', move); document.addEventListener('mouseup', end);
-            document.addEventListener('touchmove', move); document.addEventListener('touchend', end);
-        }
-
-        audio.onended = () => { 
-            if (isPlayingAd) {
-                nextSongAfterAd();
-                return;
-            }
-
-            if (audio.loop) { 
-                audio.play(); 
-            } else { 
-                songsPlayedCount++;
-                if (adsEnabled && songsPlayedCount >= adFrequency) {
-                    songsPlayedCount = 0;
-                    playAd();
-                } else {
-                    nextSong(); 
-                }
-            } 
-        };
-
-        function renderHome(songs) {
-            document.getElementById('home-grid').innerHTML = songs.filter(s => typeof s.id === 'number').map(s => `
-                <div class="music-card" onclick="playSingle(${s.id})">
-                    <button class="card-btn add-btn" onclick="openSheet('add', ${s.id}); event.stopPropagation();"><i class="fas fa-plus"></i></button>
-                    <img src="${s.img}"><p style="margin:10px 0 0; font-weight:bold">${s.title}</p><p style="margin:0; font-size:0.8rem; color:var(--text-dim)">${s.artist}</p>
-                </div>
-            `).join('');
-        }
-
-        function filterHome(q) {
-            const filtered = ALL_SONGS.filter(s => s.title.toLowerCase().includes(q.toLowerCase()) || s.artist.toLowerCase().includes(q.toLowerCase()));
-            renderHome(filtered);
-        }
-
-        function openSheet(t, id = null) {
-            if (t === 'create') document.getElementById('sheet-create').classList.add('active');
-            else if (t === 'stats') { renderStats(); document.getElementById('sheet-stats').classList.add('active'); }
-            else { selectedId = id; renderOptions(); document.getElementById('sheet-add').classList.add('active'); }
-
-            document.getElementById('overlay').classList.add('active');
-            pushNewState({ sheet: true });
-        }
-
-        function closeAllSheets() {
-            if (currentViewState.sheet) {
-                history.back();
-            } else {
-                document.getElementById('overlay').classList.remove('active');
-                document.querySelectorAll('.bottom-sheet').forEach(s => s.classList.remove('active'));
-            }
-        }
-
-        function confirmCreatePlaylist() { const n = document.getElementById('new-p-name').value; if(n){ playlists[n]=[]; save(); renderPlaylists(); closeAllSheets(); document.getElementById('new-p-name').value=""; } }
-        function save() { localStorage.setItem('myPlaylists', JSON.stringify(playlists)); }
-        
-        function renderPlaylists() {
-            document.getElementById('playlist-list').innerHTML = Object.keys(playlists).map(name => `
-                <div style="background:var(--card-bg); padding:18px; border-radius:15px; margin-top:10px; display:flex; justify-content:space-between; cursor:pointer;" onclick="openPlaylist('${name}')"><span>${name}</span><i class="fal fa-chevron-right"></i></div>
-            `).join('');
-        }
-        
-        function openPlaylist(n) { 
-            currentOpenP = n; 
-            document.getElementById('detail-title').innerText=n; 
-            document.getElementById('play-all-btn').onclick = () => { if(playlists[n].length > 0) playFromP(0); };
-            renderDetailGrid(); 
-            pushNewState({ page: 'detail' });
-        }
-        
-        function removeSong(id, e) { e.stopPropagation(); playlists[currentOpenP] = playlists[currentOpenP].filter(i => i != id); save(); renderDetailGrid(); }
-        function deleteCurrentPlaylist() { if(confirm("Eliminare questa playlist?")){ delete playlists[currentOpenP]; save(); renderPlaylists(); history.back(); } }
     </script>
 </body>
 </html>
