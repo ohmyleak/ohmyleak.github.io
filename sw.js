@@ -1,11 +1,14 @@
-const CACHE_NAME = 'purpl3l3an-cache-v8'; // Cambiato versione per forzare l'aggiornamento
+const CACHE_NAME = 'purpl3l3an-cache-v8'; // Aggiornato la versione per forzare il refresh
 
+// 1. Elenco di TUTTI i file di sistema e della grafica
 const STATIC_ASSETS = [
     './',
     './index.html',
     './favicon.ico'
 ];
 
+// 2. Elenco completo di tutte le tue tracce audio
+// Il Service Worker le scaricherà in background non appena aprirai il sito con internet attivo
 const MUSIC_ASSETS = [
     'music/dazero.mp3',
     'music/!ly.mp3',
@@ -48,7 +51,7 @@ const MUSIC_ASSETS = [
     'music/mar+e.m4a',
     'music/okk@pp@.m4a',
     'music/l%p.m4a',
-    'music/_bilico_.m4a',
+    '_bilico_.m4a',
     'music/r()t()nda.m4a',
     'music/ye@h.m4a',
     'music/come t! vorre!.m4a',
@@ -65,92 +68,82 @@ const MUSIC_ASSETS = [
     'music/m%n.m4a'
 ];
 
-// Installazione atomica pezzo per pezzo
+// Uniamo tutto in un unico grande zaino da salvare subito
+const ALL_ASSETS = [...STATIC_ASSETS, ...MUSIC_ASSETS];
+
+// Installazione: scarica TUTTO subito in cache
 self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then(async (cache) => {
-            console.log('[SW] Start caching...');
-            
-            try {
-                await cache.addAll(STATIC_ASSETS);
-                console.log('[SW] Asset statici salvati.');
-            } catch (e) {
-                console.error('[SW] Errore asset statici', e);
-            }
-
-            // Usiamo encodeURI così i file con caratteri speciali e spazi vengono indicizzati correttamente
-            for (const track of MUSIC_ASSETS) {
-                const encodedTrack = encodeURI(track);
-                try {
-                    await cache.add(encodedTrack);
-                    console.log(`[SW] In cache: ${track}`);
-                } catch (err) {
-                    console.warn(`[SW] Nome errato o file mancante: ${track}`);
-                }
-            }
-            console.log('[SW] Caching completato!');
+        caches.open(CACHE_NAME).then((cache) => {
+            console.log('[Service Worker] Scaricamento e caching di tutta la libreria musicale...');
+            // Usiamo un ciclo o andiamo tolleranti se qualche traccia manca fisicamente nella cartella
+            return cache.addAll(ALL_ASSETS).catch(err => {
+                console.error('[Service Worker] Errore nel pre-cache, assicurati che tutti i file esistano:', err);
+            });
         })
     );
     self.skipWaiting();
 });
 
+// Attivazione: eliminiamo la vecchia cache v1
 self.addEventListener('activate', (event) => {
     event.waitUntil(
-        caches.keys().then((keys) => {
-            return Promise.all(keys.map((k) => {
-                if (k !== CACHE_NAME) return caches.delete(k);
-            }));
+        caches.keys().then((cacheNames) => {
+            return Promise.all(
+                cacheNames.map((cache) => {
+                    if (cache !== CACHE_NAME) {
+                        console.log('[Service Worker] Rimozione vecchia cache:', cache);
+                        return caches.delete(cache);
+                    }
+                })
+            );
         })
     );
     self.clients.claim();
 });
 
-// Gestione del fetch con supporto specifico per lo streaming audio (Range Requests)
+// Fetch: Rispondi dalla cache se presente (ottimo per l'offline completo)
+// Fetch: Network First per HTML/UI, Cache First per le traccie audio
 self.addEventListener('fetch', (event) => {
-    // Gestione delle richieste "Range" (tipiche dei player audio del browser)
-    if (event.request.headers.get('range')) {
-        event.respondWith(
-            caches.match(event.request).then((cachedResponse) => {
-                if (cachedResponse) {
-                    return returnRangeResponse(event.request, cachedResponse);
-                }
-                return fetch(event.request);
-            })
-        );
-    } else {
-        // Richieste standard (HTML, Icone, ecc.)
-        event.respondWith(
-            caches.match(event.request).then((res) => {
-                return res || fetch(event.request).then((networkRes) => {
-                    if (networkRes.status === 200) {
-                        const copy = networkRes.clone();
-                        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-                    }
-                    return networkRes;
-                });
-            })
-        );
-    }
-});
+    const requestUrl = new URL(event.request.url);
 
-// Funzione helper per simulare le risposte parziali (HTTP 206) necessarie per i player audio offline
-async function returnRangeResponse(request, cachedResponse) {
-    const rangeHeader = request.headers.get('range');
-    const arrayBuffer = await cachedResponse.arrayBuffer();
-    const bytes = rangeHeader.replace(/bytes=/, '').split('-');
-    const start = parseInt(bytes[0], 10);
-    const end = bytes[1] ? parseInt(bytes[1], 10) : arrayBuffer.byteLength - 1;
-    
-    const chunk = arrayBuffer.slice(start, end + 1);
-    
-    return new Response(chunk, {
-        status: 206,
-        statusText: 'Partial Content',
-        headers: {
-            'Content-Range': `bytes ${start}-${end}/${arrayBuffer.byteLength}`,
-            'Accept-Ranges': 'bytes',
-            'Content-Length': chunk.byteLength,
-            'Content-Type': cachedResponse.headers.get('content-type')
-        }
-    });
-}
+    // Se la richiesta riguarda HTML o il sito base, prova prima la rete
+    if (event.request.mode === 'navigate' || requestUrl.pathname.endsWith('.html')) {
+        event.respondWith(
+            fetch(event.request)
+                .then((networkResponse) => {
+                    // Aggiorna la cache con il nuovo HTML arrivato dalla rete
+                    if (networkResponse.status === 200) {
+                        const responseToCache = networkResponse.clone();
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(event.request, responseToCache);
+                        });
+                    }
+                    return networkResponse;
+                })
+                .catch(() => {
+                    // Se siamo offline e la rete fallisce, usa l'HTML in cache
+                    return caches.match(event.request);
+                })
+        );
+        return;
+    }
+
+    // Per tutto il resto (file audio MP3, favicon, ecc.), usa prima la Cache
+    event.respondWith(
+        caches.match(event.request).then((cachedResponse) => {
+            if (cachedResponse) {
+                return cachedResponse;
+            }
+            return fetch(event.request).then((networkResponse) => {
+                if (networkResponse.status === 200) {
+                    const responseToCache = networkResponse.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, responseToCache);
+                    });
+                }
+                return networkResponse;
+            });
+        })
+    );
+});
