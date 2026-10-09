@@ -447,7 +447,7 @@
             </div>
         </header>
         <div class="search-container">
-            <input type="text" id="search-input" placeholder="Cerca musica senza pubblicità (Internet Archive)..." onkeypress="handleSearchKeyPress(event)">
+            <input type="text" id="search-input" placeholder="Cerca musica senza pubblicità (Internet Archive + Audius)..." onkeypress="handleSearchKeyPress(event)">
             <button class="search-btn-trigger" onclick="triggerSearch()">
                 <i class="fal fa-search"></i>
             </button>
@@ -1306,22 +1306,68 @@
                 const archiveResults = details
                     .filter(result => result.status === 'fulfilled' && result.value)
                     .map(result => result.value);
-                const results = [...localFiltered, ...archiveResults];
+                // Audius è la seconda fonte: catalogo dedicato alla musica con API pubblica.
+                // Il suo errore non blocca i risultati di Internet Archive (e viceversa).
+                const audiusResults = await searchAudius(query);
+                const results = [...localFiltered, ...archiveResults, ...audiusResults];
                 renderGrid(results, 'home-grid');
 
-                if (!archiveResults.length) {
+                if (!archiveResults.length && !audiusResults.length) {
                     const note = document.createElement('p');
                     note.style.cssText = 'padding:16px;color:var(--text-dim);font-size:.85rem;';
-                    note.textContent = 'Nessun file audio riproducibile trovato in Internet Archive per questa ricerca. Prova il nome dell’artista o un titolo più breve. Il catalogo contiene soprattutto registrazioni e musica disponibile in archivio, non tutto il catalogo commerciale.';
+                    note.textContent = 'Non ho trovato file riproducibili su Internet Archive o Audius per questa ricerca. Prova il nome dell’artista o un titolo più breve. I cataloghi non includono tutta la musica commerciale.';
+                    grid.appendChild(note);
+                } else {
+                    const note = document.createElement('p');
+                    note.style.cssText = 'padding:12px 16px;color:var(--text-dim);font-size:.78rem;';
+                    note.textContent = `Fonti: Internet Archive (${archiveResults.length}) · Audius (${audiusResults.length}). La disponibilità dei brani dipende dai rispettivi cataloghi.`;
                     grid.appendChild(note);
                 }
             } catch (err) {
                 console.error('Ricerca Internet Archive non riuscita:', err);
-                renderGrid(localFiltered, 'home-grid');
+                // Se Internet Archive è irraggiungibile, proviamo comunque Audius.
+                const audiusResults = await searchAudius(query);
+                renderGrid([...localFiltered, ...audiusResults], 'home-grid');
                 const note = document.createElement('div');
                 note.style.cssText = 'padding:18px;color:var(--text-dim);font-size:.85rem;';
-                note.textContent = 'La ricerca musicale online non è raggiungibile al momento. Controlla la connessione e riprova.';
+                note.textContent = audiusResults.length
+                    ? `Internet Archive non è raggiungibile; mostro i risultati Audius (${audiusResults.length}).`
+                    : 'Le fonti musicali online non sono raggiungibili al momento. Controlla la connessione e riprova.';
                 grid.appendChild(note);
+            }
+        }
+
+        async function searchAudius(query) {
+            try {
+                const params = new URLSearchParams({ query, limit: '20' });
+                // Audius consente la ricerca e lo streaming read-only tramite API.
+                const response = await fetch(`https://api.audius.co/v1/tracks/search?${params.toString()}`, {
+                    headers: { 'Accept': 'application/json' },
+                    cache: 'no-store'
+                });
+                if (!response.ok) throw new Error(`Audius HTTP ${response.status}`);
+                const payload = await response.json();
+                const tracks = Array.isArray(payload.data) ? payload.data : [];
+                return tracks.filter(track => track && track.id && track.title).map(track => {
+                    const artwork = track.artwork;
+                    const img = typeof artwork === 'string' ? artwork :
+                        (artwork && (artwork['480x480'] || artwork['150x150'] || artwork['1000x1000'])) ||
+                        'https://audius.co/favicon.ico';
+                    const artist = (track.user && (track.user.name || track.user.handle)) || track.artist_name || 'Audius';
+                    return {
+                        id: `audius-${String(track.id).replace(/[^a-zA-Z0-9_-]/g, '-')}`,
+                        title: String(track.title),
+                        artist: String(artist),
+                        img,
+                        file: `https://api.audius.co/v1/tracks/${encodeURIComponent(track.id)}/stream`,
+                        isYouTube: false,
+                        isAudius: true,
+                        audiusUrl: track.permalink || (track.user && track.user.handle ? `https://audius.co/${track.user.handle}/${track.title}` : 'https://audius.co')
+                    };
+                });
+            } catch (err) {
+                console.warn('Ricerca Audius non riuscita:', err);
+                return [];
             }
         }
 
