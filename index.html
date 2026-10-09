@@ -269,6 +269,25 @@
         }
         
         .time-box { display: flex; justify-content: space-between; width: 100%; color: var(--text-dim); font-size: 0.78rem; font-weight: 600; margin-top: 6px; }
+        #youtube-fallback {
+            display: none;
+            width: min(100%, 560px);
+            aspect-ratio: 16 / 9;
+            margin: clamp(5px, 1.5vh, 15px) 0;
+            border-radius: 18px;
+            overflow: hidden;
+            background: #000;
+        }
+        #youtube-fallback iframe { width: 100%; height: 100%; border: 0; display: block; }
+        #youtube-fallback-note { display:none; color:var(--text-dim); font-size:.75rem; text-align:center; max-width:560px; margin:0 12px 8px; }
+        #player-view.youtube-fallback-active .p-album-art,
+        #player-view.youtube-fallback-active #progress-container,
+        #player-view.youtube-fallback-active .time-box,
+        #player-view.youtube-fallback-active .volume-container,
+        #player-view.youtube-fallback-active .main-btn { display:none !important; }
+        #player-view.youtube-fallback-active #youtube-fallback,
+        #player-view.youtube-fallback-active #youtube-fallback-note { display:block; }
+
         #progress-container { width: 100%; height: 12px; background: rgba(255,255,255,0.08); border-radius: 10px; margin-top: 10px; cursor: pointer; display: flex; align-items: center; }
         #progress-bar { width: 0%; height: 5px; background: linear-gradient(90deg, var(--primary-purple), #c084fc); border-radius: 10px; position: relative; }
         #progress-bar::after { content: ''; position: absolute; right: -6px; top: -4.5px; width: 14px; height: 14px; background: white; border-radius: 50%; box-shadow: 0 0 12px var(--primary-purple); }
@@ -428,7 +447,7 @@
             </div>
         </header>
         <div class="search-container">
-            <input type="text" id="search-input" placeholder="Cerca ogni canzone su YouTube..." onkeypress="handleSearchKeyPress(event)">
+            <input type="text" id="search-input" placeholder="Cerca musica senza pubblicità (Internet Archive)..." onkeypress="handleSearchKeyPress(event)">
             <button class="search-btn-trigger" onclick="triggerSearch()">
                 <i class="fal fa-search"></i>
             </button>
@@ -579,10 +598,10 @@
 
         <div class="setting-box">
             <div>
-                <p style="margin:0; font-weight:bold;">Istanza Invidious Custom</p>
-                <p style="margin:5px 0 0; font-size:0.8rem; color:var(--text-dim);">URL backend proxy per Invidious.</p>
+                <p style="margin:0; font-weight:bold;">Istanza Piped Custom</p>
+                <p style="margin:5px 0 0; font-size:0.8rem; color:var(--text-dim);">Backend Piped usato per ricerca e streaming audio.</p>
             </div>
-            <input type="text" id="invidious-instance-input" value="https://inv.nadeko.net" onchange="updateInvidiousInstance(this.value)" style="background:rgba(255,255,255,0.08); border:1px solid var(--card-border); color:white; padding:8px 12px; border-radius:10px; font-size:0.8rem;">
+            <input type="text" id="piped-instance-input" value="https://pipedapi.kavin.rocks" onchange="updatePipedInstance(this.value)" style="background:rgba(255,255,255,0.08); border:1px solid var(--card-border); color:white; padding:8px 12px; border-radius:10px; font-size:0.8rem;">
         </div>
     </div>
 
@@ -626,6 +645,8 @@
         </div>
 
         <img id="p-img" class="p-album-art" src="" crossorigin="anonymous">
+        <div id="youtube-fallback" aria-label="Player YouTube"></div>
+        <p id="youtube-fallback-note">Riproduzione tramite YouTube: potrebbero comparire annunci. Usa i controlli del video.</p>
         <div style="text-align: center; width:100%;">
             <h2 id="p-title" style="margin:10px 0 2px; font-size: 1.25rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></h2>
             <p id="p-artist" style="color: var(--text-dim); margin-bottom: 0; font-size: 0.85rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></p>
@@ -693,7 +714,7 @@
         <button class="primary-btn" style="margin-top:15px" onclick="closeAllSheets()">Chiudi</button>
     </div>
 
-    <audio id="audio-engine" preload="auto"></audio>
+    <audio id="audio-engine" crossorigin="anonymous"></audio>
 
     <nav class="bottom-nav">
         <div class="nav-item active" id="nav-home" onclick="showPage('home')"><i class="fas fa-home"></i><span>Home</span></div>
@@ -1014,7 +1035,15 @@
         window.playlists = { 'Preferiti': [] };
         window.playCounts = {};
 
-        let invidiousInstance = 'https://inv.nadeko.net';
+        // Le richieste API passano dal proxy locale: il browser non contatta Piped direttamente,
+        // evitando il blocco CORS delle istanze pubbliche.
+        const LOCAL_PIPED_PROXY = 'http://127.0.0.1:3000/api';
+        // GitHub Pages è statico: pubblica worker.js su Cloudflare Workers e inserisci qui il suo URL.
+        const GITHUB_PIPED_PROXY = 'https://YOUR-WORKER-NAME.YOUR-SUBDOMAIN.workers.dev/api';
+        const isLocalDevelopment = ['localhost', '127.0.0.1'].includes(location.hostname);
+        const DEFAULT_PIPED_PROXY = isLocalDevelopment ? LOCAL_PIPED_PROXY : GITHUB_PIPED_PROXY;
+        let pipedInstance = (window.PIPED_PROXY_BASE || DEFAULT_PIPED_PROXY).replace(/\/$/, '');
+        const PIPED_FALLBACK_INSTANCES = [pipedInstance];
 
         let currentQueue = [];
         let originalQueue = [];
@@ -1032,8 +1061,8 @@
 
         const audio = document.getElementById('audio-engine');
 
-        function updateInvidiousInstance(url) {
-            if (url) invidiousInstance = url.replace(/\/$/, "");
+        function updatePipedInstance(url) {
+            if (url) pipedInstance = url.replace(/\/$/, "");
         }
 
         function showLoadingState() {
@@ -1102,28 +1131,45 @@
         function init() {
             renderGrid(ALL_SONGS, 'home-grid');
             
+            // In sviluppo locale disattiviamo il vecchio Service Worker: può conservare
+            // richieste/codice obsoleti e generare errori fetch non gestiti.
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('./sw.js').catch(err => console.log("SW Errore:", err));
+                navigator.serviceWorker.getRegistrations()
+                    .then(registrations => registrations.forEach(registration => registration.unregister()))
+                    .catch(err => console.warn('Impossibile rimuovere il Service Worker:', err));
             }
 
             audio.onloadstart = () => showLoadingState();
             audio.onwaiting = () => showLoadingState();
+            audio.onerror = () => {
+                const mediaError = audio.error;
+                console.error('Errore riproduzione audio:', mediaError ? { code: mediaError.code, message: mediaError.message } : 'errore sconosciuto');
+
+                const candidates = window.__pipedAudioCandidates || [];
+                const currentId = currentQueue[currentIndex] && currentQueue[currentIndex].id;
+                if (candidates.length && window.__pipedSongId === currentId && window.__pipedAudioCandidateIndex < candidates.length - 1) {
+                    window.__pipedAudioCandidateIndex++;
+                    const next = candidates[window.__pipedAudioCandidateIndex];
+                    console.warn('Provo il prossimo stream Piped:', next.format, next.mimeType);
+                    audio.src = next.url;
+                    audio.load();
+                    audio.play().then(() => showPlayingState()).catch(() => showPausedState());
+                    return;
+                }
+                // Se tutti gli URL audio di un'istanza falliscono, prova un'altra istanza Piped.
+                const song = currentQueue[currentIndex];
+                if (song && song.isYouTube && song.videoId && !window.__pipedSwitchingInstance) {
+                    window.__pipedSwitchingInstance = true;
+                    retryPipedOnAnotherInstance(song).finally(() => { window.__pipedSwitchingInstance = false; });
+                    return;
+                }
+                showPausedState();
+            };
             audio.oncanplay = () => {
                 if (!audio.paused) showPlayingState();
             };
             audio.onplaying = () => showPlayingState();
             audio.onpause = () => showPausedState();
-
-            audio.onplaying = () => showPlayingState();
-            audio.onpause = () => showPausedState();
-            audio.onerror = async () => {
-                console.error('Errore audio:', audio.error, audio.src);
-                if (pendingSongForStream && pendingAudioStreams.length && pendingStreamIndex + 1 < pendingAudioStreams.length) {
-                    const recovered = await tryNextAudioStream(true);
-                    if (recovered) return;
-                }
-                showPausedState();
-            };
 
             audio.ontimeupdate = () => {
                 if (!audio.duration || isNaN(audio.duration)) return;
@@ -1190,74 +1236,93 @@
                 return;
             }
 
-            const localFiltered = ALL_SONGS.filter(s => 
-                s.title.toLowerCase().includes(inputVal.toLowerCase()) || 
-                s.artist.toLowerCase().includes(inputVal.toLowerCase())
-            );
-            renderGrid(localFiltered, 'home-grid');
-
-            searchInvidious(inputVal);
+            searchPiped(inputVal);
         }
 
-        // Lista di istanze Invidious pubbliche di fallback
-        const INVIDIOUS_FALLBACK_INSTANCES = [
-            'https://inv.nadeko.net',
-            'https://invidious.nerdvpn.de',
-            'https://invidious.tiekoetter.com',
-            'https://invidious.f5.si'
-        ];
+        async function searchPiped(query) {
+            // Ricerca alternativa senza Piped/YouTube: catalogo audio pubblico di Internet Archive.
+            // Le API JSON supportano richieste dal browser; i file audio vengono caricati direttamente
+            // dall'elemento <audio>, senza fetch dei byte e senza proxy.
+            const grid = document.getElementById('home-grid');
+            grid.innerHTML = '<p style="padding:18px;color:var(--text-dim);">Ricerca musica in corso…</p>';
 
-        async function searchInvidious(query) {
-            let instancesToTry = [invidiousInstance, ...INVIDIOUS_FALLBACK_INSTANCES];
-            instancesToTry = [...new Set(instancesToTry)];
-
-            for (const instance of instancesToTry) {
-                try {
-                    const res = await fetch(`${instance}/api/v1/search?q=${encodeURIComponent(query)}&type=video`, {
-                        method: 'GET',
-                        headers: { 'Accept': 'application/json' }
-                    });
-
-                    if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
-
-                    const data = await res.json();
-
-                    const youtubeResults = data.map(v => {
-                        const thumb = v.videoThumbnails?.find(t => t.quality === 'maxres')
-                            || v.videoThumbnails?.find(t => t.quality === 'high')
-                            || v.videoThumbnails?.find(t => t.quality === 'medium')
-                            || v.videoThumbnails?.[0];
-                        return {
-                            id: `yt_${v.videoId}`,
-                            title: v.title || 'Titolo sconosciuto',
-                            artist: v.author || 'YouTube',
-                            img: thumb?.url || `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`,
-                            videoId: v.videoId,
-                            isYouTube: true
-                        };
-                    });
-
-                    const localFiltered = ALL_SONGS.filter(s => 
-                        s.title.toLowerCase().includes(query.toLowerCase()) || 
-                        s.artist.toLowerCase().includes(query.toLowerCase())
-                    );
-
-                    const combined = [...localFiltered, ...youtubeResults];
-                    renderGrid(combined, 'home-grid');
-                    
-                    invidiousInstance = instance;
-                    return;
-                } catch (err) {
-                    console.warn(`Istanza Invidious fallita (${instance}):`, err);
-                }
-            }
-
-            console.error("Tutte le istanze Invidious hanno risposto con errore. Mostro i risultati locali.");
-            const localFiltered = ALL_SONGS.filter(s => 
-                s.title.toLowerCase().includes(query.toLowerCase()) || 
+            const localFiltered = ALL_SONGS.filter(s =>
+                s.title.toLowerCase().includes(query.toLowerCase()) ||
                 s.artist.toLowerCase().includes(query.toLowerCase())
             );
-            renderGrid(localFiltered, 'home-grid');
+
+            try {
+                const escaped = query.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+                const searchQuery = `mediatype:audio AND (title:"${escaped}" OR creator:"${escaped}" OR subject:"${escaped}")`;
+                const params = new URLSearchParams();
+                params.set('q', searchQuery);
+                ['identifier', 'title', 'creator', 'year', 'description', 'mediatype'].forEach(field => params.append('fl[]', field));
+                params.set('rows', '24');
+                params.set('page', '1');
+                params.set('output', 'json');
+                params.append('sort[]', 'downloads desc');
+                const response = await fetch(`https://archive.org/advancedsearch.php?${params.toString()}`, { cache: 'no-store' });
+                if (!response.ok) throw new Error(`Internet Archive HTTP ${response.status}`);
+                const data = await response.json();
+                const docs = (data.response && Array.isArray(data.response.docs)) ? data.response.docs : [];
+
+                // Recupera i metadati in parallelo limitandosi ai primi 16 elementi.
+                const details = await Promise.allSettled(docs.slice(0, 16).map(async item => {
+                    if (!item.identifier) return null;
+                    const metaResponse = await fetch(`https://archive.org/metadata/${encodeURIComponent(item.identifier)}`, { cache: 'no-store' });
+                    if (!metaResponse.ok) return null;
+                    const meta = await metaResponse.json();
+                    if (!meta || !Array.isArray(meta.files)) return null;
+                    const audioFiles = meta.files.filter(file => {
+                        const name = String(file.name || '').toLowerCase();
+                        const format = String(file.format || '').toLowerCase();
+                        return /\.(mp3|m4a|ogg|oga|opus|flac|wav|aiff|aif)$/i.test(name) &&
+                            !name.includes('sample') && !name.includes('preview') &&
+                            !name.endsWith('_files.xml') && Number(file.size || 0) < 350000000 &&
+                            !/thumbnail|metadata|torrent/.test(format);
+                    });
+                    if (!audioFiles.length) return null;
+                    const preference = file => {
+                        const name = String(file.name || '').toLowerCase();
+                        const ext = name.split('.').pop();
+                        return ({ mp3: 100, m4a: 90, ogg: 80, oga: 75, opus: 70, flac: 60, wav: 50, aiff: 40, aif: 35 })[ext] || 0;
+                    };
+                    audioFiles.sort((a, b) => preference(b) - preference(a));
+                    const file = audioFiles[0];
+                    const title = Array.isArray(item.title) ? item.title[0] : (item.title || item.identifier);
+                    const creator = Array.isArray(item.creator) ? item.creator.join(', ') : (item.creator || 'Internet Archive');
+                    return {
+                        id: `ia-${String(item.identifier).replace(/[^a-zA-Z0-9_-]/g, '-')}-${String(file.name).replace(/[^a-zA-Z0-9_-]/g, '-')}`, 
+                        title: String(title),
+                        artist: String(creator),
+                        img: `https://archive.org/services/img/${encodeURIComponent(item.identifier)}`,
+                        file: `https://archive.org/download/${encodeURIComponent(item.identifier)}/${file.name.split('/').map(encodeURIComponent).join('/')}`,
+                        isYouTube: false,
+                        isInternetArchive: true,
+                        archiveUrl: `https://archive.org/details/${encodeURIComponent(item.identifier)}`
+                    };
+                }));
+
+                const archiveResults = details
+                    .filter(result => result.status === 'fulfilled' && result.value)
+                    .map(result => result.value);
+                const results = [...localFiltered, ...archiveResults];
+                renderGrid(results, 'home-grid');
+
+                if (!archiveResults.length) {
+                    const note = document.createElement('p');
+                    note.style.cssText = 'padding:16px;color:var(--text-dim);font-size:.85rem;';
+                    note.textContent = 'Nessun file audio riproducibile trovato in Internet Archive per questa ricerca. Prova il nome dell’artista o un titolo più breve. Il catalogo contiene soprattutto registrazioni e musica disponibile in archivio, non tutto il catalogo commerciale.';
+                    grid.appendChild(note);
+                }
+            } catch (err) {
+                console.error('Ricerca Internet Archive non riuscita:', err);
+                renderGrid(localFiltered, 'home-grid');
+                const note = document.createElement('div');
+                note.style.cssText = 'padding:18px;color:var(--text-dim);font-size:.85rem;';
+                note.textContent = 'La ricerca musicale online non è raggiungibile al momento. Controlla la connessione e riprova.';
+                grid.appendChild(note);
+            }
         }
 
         function openAlbum(albumName) {
@@ -1364,54 +1429,39 @@
             }
         };
 
-        function getImageUrl(url, song = null) {
-            if (!url && song?.videoId) return `https://i.ytimg.com/vi/${song.videoId}/hqdefault.jpg`;
-            if (!url) return '';
-            if (url.startsWith('//')) return 'https:' + url;
-            return url;
-        }
-
-        function setImageWithFallback(img, url, song = null) {
-            const direct = getImageUrl(url, song);
-            const fallback = song?.videoId
-                ? `https://i.ytimg.com/vi/${song.videoId}/hqdefault.jpg`
-                : (direct ? `https://images.weserv.nl/?url=${encodeURIComponent(direct.replace(/^https?:\/\//, ''))}` : '');
-
-            img.src = direct || fallback;
-            img.onerror = () => {
-                if (fallback && img.src !== fallback) {
-                    img.onerror = null;
-                    img.src = fallback;
-                } else {
-                    img.onerror = null;
-                    img.src = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="500" height="500"><rect width="100%" height="100%" fill="#15121f"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9333ea" font-family="Arial" font-size="28">Purpl3L3an</text></svg>`);
-                }
-            };
+        function escapeHTML(value) {
+            return String(value ?? '').replace(/[&<>\"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;' }[char]));
         }
 
         function renderGrid(songs, containerId, isPlaylist = false) {
             const grid = document.getElementById(containerId);
             grid.innerHTML = '';
+            
             const favs = window.playlists['Preferiti'] || [];
 
             songs.forEach(song => {
                 const card = document.createElement('div');
                 card.className = 'music-card';
+                
                 const btnClass = isPlaylist ? 'remove-btn' : 'add-btn';
                 const btnIcon = isPlaylist ? 'fa-minus' : 'fa-plus';
                 const btnAction = isPlaylist ? `removeFromPlaylist('${song.id}')` : `openAddSheet('${song.id}')`;
+
                 const isFav = favs.includes(song.id);
 
                 card.innerHTML = `
                     <div class="card-actions">
-                        <button class="card-btn fav-btn ${isFav ? 'active' : ''}" onclick="event.stopPropagation(); window.toggleFavorite('${song.id}')"><i class="fas fa-heart"></i></button>
-                        <button class="card-btn ${btnClass}" onclick="event.stopPropagation(); ${btnAction}"><i class="fas ${btnIcon}"></i></button>
+                        <button class="card-btn fav-btn ${isFav ? 'active' : ''}" onclick="event.stopPropagation(); window.toggleFavorite('${song.id}')">
+                            <i class="fas fa-heart"></i>
+                        </button>
+                        <button class="card-btn ${btnClass}" onclick="event.stopPropagation(); ${btnAction}">
+                            <i class="fas ${btnIcon}"></i>
+                        </button>
                     </div>
-                    <img class="song-cover" alt="Copertina">
-                    <p style="margin:10px 0 2px; font-weight:bold; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${song.title}</p>
-                    <p style="margin:0; font-size:0.75rem; color:var(--text-dim);">${song.artist}</p>
+                    <img src="${escapeHTML(song.img)}" loading="lazy" alt="">
+                    <p style="margin:10px 0 2px; font-weight:bold; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(song.title)}</p>
+                    <p style="margin:0; font-size:0.75rem; color:var(--text-dim);">${escapeHTML(song.artist)}</p>
                 `;
-                setImageWithFallback(card.querySelector('.song-cover'), song.img, song);
                 card.onclick = () => playQueue(songs, songs.findIndex(s => s.id === song.id));
                 grid.appendChild(card);
             });
@@ -1433,158 +1483,184 @@
             prepareAndPlaySong();
         }
 
-        let pendingAudioStreams = [];
-        let pendingStreamIndex = -1;
-        let pendingSongForStream = null;
-        let needsUserPlay = false;
-
-        function isPlayableAudioFormat(f) {
-            const type = String(f.type || '').toLowerCase();
-            const container = String(f.container || '').toLowerCase();
-            return !!f.url && (
-                type.startsWith('audio/') ||
-                container === 'm4a' ||
-                container === 'mp4' ||
-                f.itag === 140 || f.itag === 141
-            );
-        }
-
-        async function tryNextAudioStream(autoPlay = true) {
-            while (pendingStreamIndex + 1 < pendingAudioStreams.length) {
-                pendingStreamIndex++;
-                const candidate = pendingAudioStreams[pendingStreamIndex];
-                const urls = [candidate.url, candidate.directUrl].filter((u, i, arr) => u && arr.indexOf(u) === i);
-                if (!urls.length) continue;
-
-                for (const url of urls) {
-                    try {
-                        audio.pause();
-                        audio.muted = false;
-                        audio.src = url;
-                        audio.load();
-                    document.getElementById('mini-player').style.display = 'flex';
-
-                        if (autoPlay) {
-                            try {
-                                await audio.play();
-                                needsUserPlay = false;
-                            } catch (err) {
-                                if (err && err.name === 'NotAllowedError') {
-                                    needsUserPlay = true;
-                                    showPausedState();
-                                    console.warn('Il browser richiede un click dell’utente per avviare l’audio.');
-                                    return true;
-                                }
-                                throw err;
-                            }
-                        }
-                        return true;
-                    } catch (err) {
-                        console.warn('Stream audio non riproducibile, provo URL/formato successivo:', err);
-                    }
+        async function retryPipedOnAnotherInstance(song) {
+            const instances = [...new Set([pipedInstance, ...PIPED_FALLBACK_INSTANCES].map(v => v.replace(/\/$/, '')))];
+            const currentIndexInList = instances.indexOf(pipedInstance.replace(/\/$/, ''));
+            const ordered = [...instances.slice(Math.max(0, currentIndexInList + 1)), ...instances.slice(0, Math.max(0, currentIndexInList + 1))];
+            for (const instance of ordered) {
+                if (instance === pipedInstance) continue;
+                try {
+                    const response = await fetch(`${instance}/streams/${encodeURIComponent(song.videoId)}`, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+                    if (!response.ok) continue;
+                    const data = await response.json();
+                    const streams = (Array.isArray(data.audioStreams) ? data.audioStreams : [])
+                        .filter(st => st && (st.url || st.proxyUrl) && st.videoOnly !== true)
+                        .sort((a, b) => {
+                            const score = st => (String(st.mimeType || '').toLowerCase().includes('audio/mp4') || String(st.format || '').toLowerCase() === 'm4a' ? 100000000 : 0) + (Number(st.bitrate) || 0);
+                            return score(b) - score(a);
+                        });
+                    if (!streams.length) continue;
+                    const urls = streams.map(st => ({ url: st.url || st.proxyUrl, format: st.format || '', mimeType: st.mimeType || '', bitrate: st.bitrate || 0 }));
+                    pipedInstance = instance;
+                    window.__pipedAudioCandidates = urls;
+                    window.__pipedAudioCandidateIndex = 0;
+                    window.__pipedSongId = song.id;
+                    audio.pause();
+                    audio.src = urls[0].url;
+                    audio.load();
+                    await audio.play();
+                    showPlayingState();
+                    return;
+                } catch (err) {
+                    console.warn('Tentativo Piped alternativo fallito:', instance, err);
                 }
             }
-            return false;
+            showPausedState();
+            console.error('Nessuna istanza Piped è riuscita a riprodurre questo brano.');
+        }
+
+        function clearYouTubeFallback() {
+            const playerView = document.getElementById('player-view');
+            const holder = document.getElementById('youtube-fallback');
+            if (playerView) playerView.classList.remove('youtube-fallback-active');
+            if (holder) holder.innerHTML = '';
+        }
+
+        function startYouTubeFallback(song) {
+            if (!song || !song.videoId) return false;
+            audio.pause();
+            audio.removeAttribute('src');
+            audio.load();
+            const holder = document.getElementById('youtube-fallback');
+            const playerView = document.getElementById('player-view');
+            if (!holder || !playerView) return false;
+            const id = encodeURIComponent(song.videoId);
+            holder.innerHTML = `<iframe title="${String(song.title || 'YouTube').replace(/[&<>\"]/g, '')}" src="https://www.youtube.com/embed/${id}?autoplay=1&playsinline=1&rel=0" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
+            playerView.classList.add('youtube-fallback-active');
+            showPlayingState();
+            return true;
         }
 
         async function prepareAndPlaySong() {
             const song = currentQueue[currentIndex];
             if (!song) return;
 
+            clearYouTubeFallback();
             window.playCounts[song.id] = (window.playCounts[song.id] || 0) + 1;
             window.savePlayCountsToCloud();
+
             updatePlayerUI(song);
             extractDynamicColor(song.img);
+            document.getElementById('mini-player').style.display = 'flex';
             showLoadingState();
-
-            audio.pause();
-            audio.muted = false;
-            audio.volume = Math.max(0, Math.min(1, audio.volume || 1));
-            audio.removeAttribute('src');
-            audio.load();
-            pendingAudioStreams = [];
-            pendingStreamIndex = -1;
-            pendingSongForStream = song;
-
-            if (song.isYouTube) {
-                const instancesToTry = [...new Set([invidiousInstance, ...INVIDIOUS_FALLBACK_INSTANCES])];
-                let foundStreams = [];
-                let workingInstance = null;
-
-                for (const instance of instancesToTry) {
-                    try {
-                        const res = await fetch(`${instance}/api/v1/videos/${encodeURIComponent(song.videoId)}`, {
-                            headers: { 'Accept': 'application/json' },
-                            cache: 'no-store'
-                        });
-                        if (!res.ok) continue;
-
-                        const details = await res.json();
-                        const formats = [
-                            ...(details.adaptiveFormats || []),
-                            ...(details.formatStreams || [])
-                        ];
-
-                        const streams = formats
-                            .filter(isPlayableAudioFormat)
-                            .filter((f, i, arr) => arr.findIndex(x => x.url === f.url) === i)
-                            .sort((a, b) => {
-                                const abrA = Number(a.bitrate || a.averageBitrate || 0);
-                                const abrB = Number(b.bitrate || b.averageBitrate || 0);
-                                return abrB - abrA;
-                            });
-
-                        if (streams.length) {
-                            // Prefer the Invidious playback proxy instead of exposing
-                            // the raw Googlevideo URL directly to the browser.
-                            foundStreams = streams.map(f => ({
-                                ...f,
-                                directUrl: f.url,
-                                url: f.itag
-                                    ? `${instance}/latest_version?id=${encodeURIComponent(song.videoId)}&itag=${encodeURIComponent(f.itag)}&local=true`
-                                    : f.url
-                            }));
-                            workingInstance = instance;
-                            break;
-                        }
-                    } catch (err) {
-                        console.warn(`Invidious streaming fallito (${instance}):`, err);
-                    }
-                }
-
-                if (!foundStreams.length) {
-                    alert('Non è stato possibile ottenere uno stream audio da Invidious per questo video.');
-                    showPausedState();
-                    return;
-                }
-
-                invidiousInstance = workingInstance;
-                pendingAudioStreams = foundStreams;
-            } else {
-                pendingAudioStreams = [{ url: song.file }];
-            }
-
             updatePlayerFavoriteState();
             updateUpNextUI();
 
-            const started = await tryNextAudioStream(true);
-            if (!started) {
-                alert('Lo stream audio è stato trovato, ma il browser non riesce a riprodurlo. Provo automaticamente un altro formato quando disponibile.');
+            // Per i risultati YouTube usiamo esclusivamente Piped.
+            // Recuperiamo gli stream e proviamo più formati/istanze prima di dichiarare errore.
+            if (song.isYouTube && song.videoId) {
+                let streamReady = false;
+                let lastError = null;
+                const instancesToTry = [...new Set(
+                    [pipedInstance, ...PIPED_FALLBACK_INSTANCES]
+                        .filter(Boolean)
+                        .map(v => v.replace(/\/$/, ''))
+                )];
+
+                for (const instance of instancesToTry) {
+                    try {
+                        const res = await fetch(`${instance}/streams/${encodeURIComponent(song.videoId)}`, {
+                            method: 'GET',
+                            headers: { 'Accept': 'application/json' },
+                            cache: 'no-store'
+                        });
+                        if (!res.ok) throw new Error(`Piped HTTP ${res.status}`);
+
+                        const details = await res.json();
+                        const streams = Array.isArray(details.audioStreams) ? details.audioStreams : [];
+
+                        // Preferiamo AAC/M4A; poi Opus/WebM. Evitiamo stream video-only.
+                        const usable = streams
+                            .filter(s => s && (s.url || s.proxyUrl) && s.videoOnly !== true)
+                            .filter(s => {
+                                const mime = String(s.mimeType || '').toLowerCase();
+                                const format = String(s.format || '').toLowerCase();
+                                return mime.startsWith('audio/') || ['m4a', 'opus', 'webm'].includes(format);
+                            });
+
+                        const ranked = [...usable].sort((a, b) => {
+                            const score = (s) => {
+                                const mime = String(s.mimeType || '').toLowerCase();
+                                const format = String(s.format || '').toLowerCase();
+                                let n = Number(s.bitrate) || 0;
+                                if (mime.includes('audio/mp4') || format === 'm4a') n += 100000000;
+                                else if (mime.includes('audio/webm') || format === 'opus') n += 50000000;
+                                return n;
+                            };
+                            return score(b) - score(a);
+                        });
+
+                        if (!ranked.length) throw new Error('Piped non ha restituito stream audio');
+
+                        // Salviamo tutti gli URL: se uno restituisce errore, il player prova il successivo.
+                        window.__pipedAudioCandidates = ranked.map(s => ({
+                            url: s.url || s.proxyUrl,
+                            mimeType: s.mimeType || '',
+                            format: s.format || '',
+                            bitrate: s.bitrate || 0
+                        }));
+                        window.__pipedAudioCandidateIndex = 0;
+                        window.__pipedSongId = song.id;
+                        pipedInstance = instance;
+
+                        const selected = window.__pipedAudioCandidates[0];
+                        audio.pause();
+                        audio.removeAttribute('crossorigin');
+                        audio.preload = 'auto';
+                        audio.src = selected.url;
+                        audio.load();
+                        console.log('Piped stream:', selected.format, selected.mimeType, selected.bitrate);
+                        streamReady = true;
+                        break;
+                    } catch (err) {
+                        lastError = err;
+                        console.warn(`Piped streaming fallito su ${instance}:`, err);
+                    }
+                }
+
+                if (!streamReady) {
+                    console.warn('Piped non disponibile; provo il player YouTube ufficiale:', lastError);
+                    startYouTubeFallback(song);
+                    return;
+                }
+            } else {
+                audio.pause();
+                audio.removeAttribute('crossorigin');
+                audio.preload = 'auto';
+                audio.src = song.file;
+                audio.load();
+            }
+
+            // Prova immediatamente: se il browser ha perso il gesto utente durante il fetch,
+            // il pulsante Play rimane disponibile e l'utente può avviare lo stream senza ricaricare.
+            try {
+                await audio.play();
+                showPlayingState();
+            } catch (e) {
                 showPausedState();
+                console.warn('Play automatico non consentito dal browser:', e);
             }
 
             if ('mediaSession' in navigator) {
                 navigator.mediaSession.metadata = new MediaMetadata({
                     title: song.title,
                     artist: song.artist,
-                    artwork: [{ src: getImageUrl(song.img, song), sizes: '512x512', type: 'image/jpeg' }]
+                    artwork: [{ src: song.img, sizes: '512x512', type: 'image/png' }]
                 });
-                try {
-                    navigator.mediaSession.setActionHandler('play', () => togglePlay());
-                    navigator.mediaSession.setActionHandler('pause', () => togglePlay());
-                    navigator.mediaSession.setActionHandler('previoustrack', () => prevSong());
-                    navigator.mediaSession.setActionHandler('nexttrack', () => nextSong());
-                } catch (_) {}
+                navigator.mediaSession.setActionHandler('play', () => togglePlay());
+                navigator.mediaSession.setActionHandler('pause', () => togglePlay());
+                navigator.mediaSession.setActionHandler('previoustrack', () => prevSong());
+                navigator.mediaSession.setActionHandler('nexttrack', () => nextSong());
             }
         }
 
@@ -1638,26 +1714,23 @@
         function updatePlayerUI(data) {
             document.getElementById('m-title').innerText = data.title;
             document.getElementById('m-artist').innerText = data.artist;
-            setImageWithFallback(document.getElementById('m-img'), data.img, data);
+            document.getElementById('m-img').src = data.img;
 
             document.getElementById('p-title').innerText = data.title;
             document.getElementById('p-artist').innerText = data.artist;
-            setImageWithFallback(document.getElementById('p-img'), data.img, data);
+            document.getElementById('p-img').src = data.img;
         }
 
-        async function togglePlay() {
+        function togglePlay() {
+            if (document.getElementById('player-view')?.classList.contains('youtube-fallback-active')) {
+                // Il player incorporato ha i propri controlli; evitare di avviare un audio vuoto.
+                return;
+            }
             if (audio.paused) {
-                try {
-                    audio.muted = false;
-                    audio.volume = Math.max(0.01, audio.volume || 1);
-                    if (audioCtx && audioCtx.state === 'suspended') await audioCtx.resume();
-                    await audio.play();
-                    needsUserPlay = false;
-                    showPlayingState();
-                } catch (err) {
-                    console.warn('Impossibile avviare l’audio:', err);
+                audio.play().then(() => showPlayingState()).catch(err => {
+                    console.warn('Play fallito:', err);
                     showPausedState();
-                }
+                });
             } else {
                 audio.pause();
             }
