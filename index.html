@@ -635,6 +635,10 @@
         <button class="primary-btn" style="background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 8px 20px rgba(16,185,129,0.25);" onclick="openPlaylistDetail('Preferiti')"><i class="fas fa-heart" style="margin-right:8px;"></i> Brani Preferiti</button>
         <button class="primary-btn" style="background: linear-gradient(135deg, #14b8a6, #2dd4bf); box-shadow: 0 8px 20px rgba(45,212,191,0.25);" onclick="openSheet('stats')"><i class="fas fa-chart-line" style="margin-right:8px;"></i> La tua Top 10</button>
         <div id="playlist-list" style="margin-top:20px;"></div>
+        <section style="margin-top:28px;">
+            <h2 style="font-size:1.15rem;margin-bottom:12px;"><i class="fas fa-inbox" style="color:var(--primary-purple);margin-right:8px;"></i>Playlist ricevute</h2>
+            <div id="shared-playlists-list"><p style="color:var(--text-dim);font-size:.85rem;">Accedi per ricevere playlist dagli amici.</p></div>
+        </section>
     </div>
 
     <!-- ACCOUNT -->
@@ -660,6 +664,15 @@
                 <button id="remove-avatar-btn" class="hidden" onclick="removeCustomAvatar()" style="background:none; border:none; color:var(--danger); font-size:0.8rem; margin-top:12px; cursor:pointer;">
                     <i class="fas fa-trash"></i> Rimuovi foto personalizzata
                 </button>
+            </div>
+            <div class="setting-box" style="display:block;">
+                <p style="margin:0 0 8px;font-weight:700;"><i class="fas fa-at" style="color:var(--primary-purple);margin-right:7px;"></i>Il tuo nickname</p>
+                <p style="margin:0 0 12px;color:var(--text-dim);font-size:.82rem;">Deve essere unico: i tuoi amici lo useranno per inviarti playlist.</p>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <input id="nickname-input" maxlength="24" autocomplete="nickname" placeholder="es. kevin_music" style="flex:1;min-width:0;padding:13px;border:1px solid var(--card-border);border-radius:12px;background:rgba(255,255,255,.06);color:white;font:inherit;">
+                    <button class="primary-btn" style="width:auto;margin:0;padding:13px 16px;" onclick="saveNickname()">Salva</button>
+                </div>
+                <p id="nickname-status" aria-live="polite" style="font-size:.8rem;color:var(--text-dim);margin:9px 0 0;"></p>
             </div>
             <div class="setting-box">
                 <div>
@@ -718,7 +731,8 @@
             <h1 id="detail-title">Playlist</h1>
             <i id="delete-playlist-btn" class="fal fa-trash" onclick="deleteCurrentPlaylist()" style="color: var(--danger); font-size:1.2rem; cursor:pointer;"></i>
         </header>
-        <button id="play-all-btn" class="primary-btn" style="margin-bottom: 25px;"><i class="fas fa-play" style="margin-right:8px;"></i> Riproduci Tutto</button>
+        <button id="play-all-btn" class="primary-btn" style="margin-bottom: 12px;"><i class="fas fa-play" style="margin-right:8px;"></i> Riproduci Tutto</button>
+        <button id="share-playlist-btn" class="primary-btn" style="margin-bottom:25px;background:linear-gradient(135deg,#7c3aed,#c026d3);" onclick="shareCurrentPlaylist()"><i class="fas fa-user-friends" style="margin-right:8px;"></i> Condividi con un amico</button>
         <div class="music-grid" id="detail-grid"></div>
     </div>
 
@@ -875,6 +889,12 @@
             getFirestore, 
             doc, 
             setDoc, 
+            getDoc,
+            runTransaction,
+            collection,
+            addDoc,
+            query,
+            where,
             onSnapshot 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -995,7 +1015,8 @@
             if (!currentUser) return;
             try {
                 await setDoc(doc(db, "users", currentUser.uid), {
-                    playlists: window.playlists
+                    playlists: window.playlists,
+                    sharedSongs: window.sharedSongs || {}
                 }, { merge: true });
             } catch (error) {
                 console.error("Errore salvataggio playlist su cloud:", error);
@@ -1018,6 +1039,9 @@
                 currentUser = user;
                 document.getElementById('acc-email').innerText = user.email;
                 document.getElementById('acc-username').innerText = user.displayName || user.email.split('@')[0];
+                const nicknameInput = document.getElementById('nickname-input');
+                if (nicknameInput) nicknameInput.value = '';
+                startSharedPlaylistListener(user.uid);
 
                 document.getElementById('account-logged-in').classList.remove('hidden');
                 document.getElementById('account-auth-form').classList.add('hidden');
@@ -1029,7 +1053,20 @@
                 unsubscribeUserDoc = onSnapshot(userDocRef, (docSnap) => {
                     if (docSnap.exists()) {
                         const data = docSnap.data();
+                        if (data.nickname) {
+                            const nicknameInput = document.getElementById('nickname-input');
+                            if (nicknameInput && document.activeElement !== nicknameInput) nicknameInput.value = data.nickname;
+                            document.getElementById('acc-username').innerText = data.nickname;
+                            const status = document.getElementById('nickname-status');
+                            if (status) status.textContent = `Il tuo nickname: @${data.nickname}`;
+                        }
                         
+                        if (data.sharedSongs && typeof data.sharedSongs === 'object') {
+                            window.sharedSongs = data.sharedSongs;
+                            Object.entries(data.sharedSongs).forEach(([id, song]) => {
+                                if (!ALL_SONGS.some(existing => String(existing.id) === String(id))) ALL_SONGS.push({ ...song, id });
+                            });
+                        }
                         if (data.playlists) {
                             window.playlists = data.playlists;
                             if (window.renderPlaylists) window.renderPlaylists();
@@ -1065,6 +1102,7 @@
             } else {
                 if (unsubscribeUserDoc) unsubscribeUserDoc();
                 currentUser = null;
+                if (sharedPlaylistUnsubscribe) { sharedPlaylistUnsubscribe(); sharedPlaylistUnsubscribe = null; }
                 if (!window.playlists) window.playlists = { 'Preferiti': [] };
                 window.playCounts = {};
                 if (window.renderPlaylists) window.renderPlaylists();
@@ -1075,6 +1113,133 @@
                 hideAppLoader();
             }
         });
+
+        let sharedPlaylistUnsubscribe = null;
+        const sharedPlaylistCache = new Map();
+
+        window.saveNickname = async function() {
+            if (!currentUser) { alert('Accedi prima di scegliere un nickname.'); return; }
+            const input = document.getElementById('nickname-input');
+            const status = document.getElementById('nickname-status');
+            const nickname = String(input?.value || '').trim().replace(/^@+/, '');
+            if (!/^[a-zA-Z0-9_]{3,24}$/.test(nickname)) {
+                if (status) status.textContent = 'Usa 3–24 caratteri: lettere, numeri e underscore.';
+                return;
+            }
+            const normalized = nickname.toLowerCase();
+            const userRef = doc(db, 'users', currentUser.uid);
+            const nameRef = doc(db, 'usernames', normalized);
+            if (status) status.textContent = 'Controllo disponibilità…';
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const nameSnap = await transaction.get(nameRef);
+                    const userSnap = await transaction.get(userRef);
+                    const oldNickname = userSnap.exists() ? userSnap.data().nickname : null;
+                    if (nameSnap.exists() && nameSnap.data().uid !== currentUser.uid) throw new Error('NICKNAME_OCCUPATO');
+                    if (oldNickname && oldNickname.toLowerCase() !== normalized) {
+                        const oldRef = doc(db, 'usernames', oldNickname.toLowerCase());
+                        const oldSnap = await transaction.get(oldRef);
+                        if (oldSnap.exists() && oldSnap.data().uid === currentUser.uid) transaction.delete(oldRef);
+                    }
+                    transaction.set(nameRef, { uid: currentUser.uid, nickname, updatedAt: Date.now() });
+                    transaction.set(userRef, { nickname, nicknameLower: normalized }, { merge: true });
+                });
+                document.getElementById('acc-username').innerText = nickname;
+                if (status) status.textContent = `Perfetto! Il nickname @${nickname} è stato salvato.`;
+            } catch (error) {
+                if (status) status.textContent = error.message === 'NICKNAME_OCCUPATO' ? 'Questo nickname è già occupato. Scegline un altro.' : 'Non è stato possibile salvare il nickname. Controlla le regole Firebase.';
+                console.error('Salvataggio nickname:', error);
+            }
+        };
+
+        function startSharedPlaylistListener(uid) {
+            if (sharedPlaylistUnsubscribe) sharedPlaylistUnsubscribe();
+            const target = document.getElementById('shared-playlists-list');
+            if (target) target.innerHTML = '<p style="color:var(--text-dim);font-size:.85rem;">Caricamento playlist ricevute…</p>';
+            const q = query(collection(db, 'sharedPlaylists'), where('recipientUid', '==', uid));
+            sharedPlaylistUnsubscribe = onSnapshot(q, (snapshot) => {
+                const container = document.getElementById('shared-playlists-list');
+                if (!container) return;
+                container.innerHTML = '';
+                if (snapshot.empty) {
+                    container.innerHTML = '<p style="color:var(--text-dim);font-size:.85rem;">Non hai ancora ricevuto playlist.</p>';
+                    return;
+                }
+                snapshot.forEach((sharedDoc) => {
+                    const data = sharedDoc.data();
+                    sharedPlaylistCache.set(sharedDoc.id, data);
+                    const card = document.createElement('div');
+                    card.className = 'album-list-item';
+                    const title = document.createElement('div');
+                    title.innerHTML = '<i class="fas fa-music" style="color:var(--primary-purple);margin-right:12px;"></i>';
+                    const textBox = document.createElement('span');
+                    textBox.textContent = `${data.playlistName || 'Playlist'} · da @${data.senderNickname || 'amico'}`;
+                    title.appendChild(textBox);
+                    const button = document.createElement('button');
+                    button.className = 'primary-btn'; button.style.cssText = 'width:auto;margin:0;padding:9px 12px;font-size:.78rem;';
+                    button.textContent = 'Importa';
+                    button.onclick = (event) => { event.stopPropagation(); importSharedPlaylist(sharedDoc.id); };
+                    card.append(title, button); container.appendChild(card);
+                });
+            }, (error) => {
+                console.error('Lettura playlist condivise:', error);
+                if (target) target.innerHTML = '<p style="color:var(--text-dim);font-size:.85rem;">Impossibile caricare le playlist. Controlla le regole di Firestore.</p>';
+            });
+        }
+
+        window.shareCurrentPlaylist = async function() {
+            if (!currentUser) { alert('Accedi per condividere una playlist.'); return; }
+            if (!currentPlaylistName || currentPlaylistName === 'Preferiti') { alert('Apri una playlist personale da condividere.'); return; }
+            const nicknameInput = document.getElementById('nickname-input');
+            const myNickname = String(nicknameInput?.value || '').trim().replace(/^@+/, '');
+            if (!myNickname) { alert('Prima scegli un nickname nella pagina Account.'); return; }
+            const friendNickname = prompt('Inserisci il nickname del tuo amico (senza @):');
+            if (!friendNickname) return;
+            const normalized = friendNickname.trim().replace(/^@+/, '').toLowerCase();
+            try {
+                const friendSnap = await getDoc(doc(db, 'usernames', normalized));
+                if (!friendSnap.exists()) { alert('Nickname non trovato. Chiedi al tuo amico di impostarlo nella pagina Account.'); return; }
+                const recipientUid = friendSnap.data().uid;
+                if (recipientUid === currentUser.uid) { alert('Non puoi condividere una playlist con te stesso.'); return; }
+                const songIds = window.playlists[currentPlaylistName] || [];
+                const songPool = [...ALL_SONGS, ...(window.__dynamicSongs || []), ...Object.values(window.sharedSongs || {})];
+                const songs = songIds.map(id => songPool.find(song => String(song.id) === String(id))).filter(Boolean).map(song => ({
+                    title: String(song.title || 'Brano'), artist: String(song.artist || 'Artista'), img: String(song.img || ''),
+                    file: String(song.file || ''), videoId: song.videoId || null, isYouTube: !!song.isYouTube,
+                    isInternetArchive: !!song.isInternetArchive, archiveUrl: song.archiveUrl || null
+                }));
+                if (!songs.length) { alert('Questa playlist non contiene brani condivisibili.'); return; }
+                await addDoc(collection(db, 'sharedPlaylists'), {
+                    recipientUid, senderUid: currentUser.uid, senderNickname: myNickname,
+                    playlistName: currentPlaylistName, songs, createdAt: Date.now()
+                });
+                alert(`Playlist inviata a @${friendSnap.data().nickname || friendNickname.trim()}!`);
+            } catch (error) {
+                console.error('Condivisione playlist:', error);
+                alert('Non è stato possibile condividere la playlist. Verifica le regole Firestore per usernames e sharedPlaylists.');
+            }
+        };
+
+        function importSharedPlaylist(sharedId) {
+            const data = sharedPlaylistCache.get(sharedId);
+            if (!data || !Array.isArray(data.songs)) return;
+            const safeBase = `Da ${data.senderNickname || 'amico'} - ${data.playlistName || 'Playlist'}`.slice(0, 45);
+            let name = safeBase, suffix = 2;
+            while (window.playlists[name]) name = `${safeBase} (${suffix++})`;
+            const ids = [];
+            data.songs.forEach((song, index) => {
+                const id = `shared-${sharedId}-${index}`;
+                const savedSong = { ...song, id };
+                if (!ALL_SONGS.some(existing => String(existing.id) === id)) ALL_SONGS.push(savedSong);
+                if (!window.sharedSongs) window.sharedSongs = {};
+                window.sharedSongs[id] = savedSong;
+                ids.push(id);
+            });
+            window.playlists[name] = ids;
+            window.savePlaylistsToCloud();
+            window.renderPlaylists();
+            alert(`Playlist importata nella tua libreria: ${name}`);
+        }
 
         window.handleGoogleLogin = function() {
             signInWithPopup(auth, googleProvider)
@@ -1172,6 +1337,8 @@
 
         window.playlists = { 'Preferiti': [] };
         window.playCounts = {};
+        window.sharedSongs = {};
+        window.__dynamicSongs = window.__dynamicSongs || [];
 
         // Le richieste API passano dal proxy locale: il browser non contatta Piped direttamente,
         // evitando il blocco CORS delle istanze pubbliche.
@@ -1195,6 +1362,9 @@
         let sleepTimerInterval = null;
         let sleepTimerEndAt = 0;
         let sleepFadeInterval = null;
+        let songTransitionInterval = null;
+        let fadeInOnNextPlay = false;
+        let fadeTargetVolume = 1;
 
         let syncedLyrics = [];
         let currentLyricIndex = -1;
@@ -1836,6 +2006,7 @@
             if (!song) return;
 
             clearYouTubeFallback();
+            if (fadeInOnNextPlay) audio.volume = 0;
             window.playCounts[song.id] = (window.playCounts[song.id] || 0) + 1;
             window.savePlayCountsToCloud();
 
@@ -1936,6 +2107,17 @@
             try {
                 await audio.play();
                 showPlayingState();
+                if (fadeInOnNextPlay) {
+                    fadeInOnNextPlay = false;
+                    const targetVolume = Math.max(0, Math.min(1, fadeTargetVolume));
+                    clearInterval(songTransitionInterval);
+                    let step = 0;
+                    songTransitionInterval = setInterval(() => {
+                        step++;
+                        audio.volume = Math.min(targetVolume, targetVolume * step / 8);
+                        if (step >= 8) { audio.volume = targetVolume; clearInterval(songTransitionInterval); songTransitionInterval = null; }
+                    }, 45);
+                }
             } catch (e) {
                 showPausedState();
                 console.warn('Play automatico non consentito dal browser:', e);
@@ -1994,7 +2176,10 @@
 
                     const darkColor = `rgb(${r}, ${g}, ${b})`;
                     const pView = document.getElementById('player-view');
-                    pView.style.background = `radial-gradient(circle at 50% 25%, ${darkColor} 0%, var(--bg-dark) 90%)`;
+                    const accent = `rgb(${Math.min(255, Math.floor(r * 1.35 + 28))}, ${Math.min(255, Math.floor(g * 1.28 + 20))}, ${Math.min(255, Math.floor(b * 1.4 + 34))})`;
+                    pView.style.background = `linear-gradient(145deg, ${darkColor} 0%, ${accent} 46%, var(--bg-dark) 100%)`;
+                    pView.style.setProperty('--cover-accent', accent);
+                    pView.style.transition = 'background 700ms ease';
                 } catch (e) {
                     console.log("Errore estrazione colore dinamico:", e);
                 }
@@ -2051,20 +2236,36 @@
             }
         }
 
+        function transitionSongTo(index) {
+            if (!currentQueue.length) return;
+            clearInterval(songTransitionInterval);
+            const originalVolume = Math.max(0, Math.min(1, Number(document.getElementById('vol-slider')?.value ?? lastVolume ?? audio.volume ?? 1)));
+            fadeTargetVolume = originalVolume;
+            let step = 0;
+            const startVolume = audio.volume;
+            clearInterval(songTransitionInterval);
+            songTransitionInterval = setInterval(() => {
+                step++;
+                audio.volume = Math.max(0, startVolume * (1 - step / 6));
+                if (step >= 6) {
+                    clearInterval(songTransitionInterval); songTransitionInterval = null;
+                    audio.pause(); audio.volume = 0;
+                    currentIndex = index;
+                    fadeInOnNextPlay = true;
+                    prepareAndPlaySong();
+                }
+            }, 35);
+        }
+
         function nextSong() {
             if (currentQueue.length === 0) return;
-            currentIndex = (currentIndex + 1) % currentQueue.length;
-            prepareAndPlaySong();
+            transitionSongTo((currentIndex + 1) % currentQueue.length);
         }
 
         function prevSong() {
             if (currentQueue.length === 0) return;
-            if (audio.currentTime > 3) {
-                audio.currentTime = 0;
-                return;
-            }
-            currentIndex = (currentIndex - 1 + currentQueue.length) % currentQueue.length;
-            prepareAndPlaySong();
+            if (audio.currentTime > 3) { audio.currentTime = 0; return; }
+            transitionSongTo((currentIndex - 1 + currentQueue.length) % currentQueue.length);
         }
 
         function toggleShuffle() {
