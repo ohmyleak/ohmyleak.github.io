@@ -429,6 +429,112 @@
         #app-loader.loader-hidden { opacity: 0; visibility: hidden; pointer-events: none; }
         .spinner { width: 48px; height: 48px; border: 4px solid rgba(255, 255, 255, 0.1); border-top: 4px solid var(--primary-purple); border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    
+
+        /* Purpl3L3an UI refresh: polished dark music-player aesthetic */
+        :root {
+            --bg-dark: #09090d;
+            --card-bg: rgba(255,255,255,.045);
+            --card-border: rgba(255,255,255,.09);
+            --primary-purple: #a855f7;
+            --primary-glow: rgba(168,85,247,.24);
+            --text-dim: #a1a1aa;
+            --glass-bg: rgba(20,19,27,.94);
+        }
+        body { background-image: radial-gradient(ellipse at 50% -15%, rgba(147,51,234,.20), transparent 52%), linear-gradient(180deg,#0b0a10 0%,#09090d 70%); }
+        .page-view { padding: 24px 20px 30px; }
+        header { margin-bottom: 24px; padding-top: 4px; }
+        header h1 { font-size: clamp(1.7rem, 5vw, 2.1rem); letter-spacing: -1px; }
+        .search-container { border-radius: 999px; padding: 7px 8px 7px 18px; background: #18171f; border-color: rgba(255,255,255,.07); margin-bottom: 24px; }
+        .search-container:focus-within { background: #1d1b25; border-color: rgba(168,85,247,.7); box-shadow: 0 0 0 3px rgba(168,85,247,.10); }
+        .search-container input { min-width: 0; margin-left: 8px; font-size: .92rem; }
+        .search-btn-trigger { width: 42px; height: 42px; border-radius: 50%; background: #a855f7; }
+        .music-grid { gap: 12px; }
+        .music-card, .album-item { padding: 10px; border-radius: 17px; background: rgba(255,255,255,.035); border-color: rgba(255,255,255,.065); backdrop-filter: none; }
+        .music-card:hover, .album-item:hover { background: rgba(255,255,255,.075); border-color: rgba(255,255,255,.13); transform: translateY(-2px); }
+        .music-card img, .album-item img { border-radius: 12px; box-shadow: none; }
+        .card-actions { top: 15px; right: 15px; gap: 6px; }
+        .card-btn { width: 30px; height: 30px; background: rgba(12,11,16,.78); }
+        .add-btn { background: #a855f7; }
+        .bottom-nav { height: 76px; background: rgba(13,12,17,.96); border-top-color: rgba(255,255,255,.07); }
+        .nav-item { font-size: .68rem; gap: 6px; }
+        .nav-item i { font-size: 1.15rem; }
+        .nav-item.active { color: #c084fc; }
+        #mini-player { bottom: 86px; height: 68px; border-radius: 14px; background: rgba(31,29,38,.97); border-color: rgba(255,255,255,.08); box-shadow: 0 8px 28px rgba(0,0,0,.38); }
+        .mini-info img { width: 48px; height: 48px; border-radius: 8px; }
+        #player-view { background: radial-gradient(ellipse at 50% 15%, rgba(120,53,180,.34), transparent 48%), #101014; }
+        .p-top-actions { gap: 7px; }
+        .p-top-actions i { width: 36px; height: 36px; font-size: .98rem; background: rgba(255,255,255,.055); border-color: rgba(255,255,255,.07); }
+        .p-album-art { width: min(72vw, 340px); max-width: 340px; aspect-ratio: 1/1; object-fit: cover; border-radius: 16px; box-shadow: 0 22px 60px rgba(0,0,0,.4); }
+        #p-title { font-size: 1.35rem !important; font-weight: 800; letter-spacing: -.4px; }
+        #p-artist { font-size: .9rem !important; }
+        #progress-container { height: 14px; background: transparent; position: relative; }
+        #progress-container:before { content:''; position:absolute; left:0; right:0; height:4px; border-radius:99px; background:rgba(255,255,255,.16); }
+        #progress-bar { z-index:1; height:4px; background:#c084fc; }
+        #progress-bar::after { width:12px; height:12px; top:-4px; right:-5px; box-shadow:none; }
+        .main-btn { width: 58px; height: 58px; box-shadow: none; }
+        .up-next-card { border-radius: 12px; background: rgba(255,255,255,.045); border-color: rgba(255,255,255,.07); }
+        .bottom-sheet { background: #17151e; border-radius: 24px 24px 0 0; padding: 24px 22px calc(24px + env(safe-area-inset-bottom)); }
+        .primary-btn { border-radius: 999px; box-shadow: none; }
+        .setting-box, .profile-card { border-radius: 18px; background: rgba(255,255,255,.035); }
+        .sleep-presets { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; margin:16px 0; }
+        .sleep-preset { padding:13px 6px; border-radius:13px; border:1px solid var(--card-border); background:rgba(255,255,255,.045); color:var(--text-main); font-family:inherit; font-size:.9rem; font-weight:600; cursor:pointer; }
+        .sleep-preset:hover { background:rgba(168,85,247,.16); border-color:rgba(168,85,247,.55); }
+        .sleep-preset small { display:block; color:var(--text-dim); font-size:.68rem; margin-top:4px; }
+        .sleep-custom-row { display:flex; gap:10px; align-items:center; margin:12px 0 16px; }
+        .sleep-custom-row input { flex:1; min-width:0; padding:13px 14px; border:1px solid var(--card-border); background:rgba(255,255,255,.06); color:white; border-radius:12px; font:inherit; }
+        .sleep-status { color:#d8b4fe; font-size:.84rem; line-height:1.5; min-height:1.3em; }
+        @media (min-width:768px) {
+            .page-view { max-width:1180px; padding:36px 44px 44px; }
+            .music-grid { grid-template-columns:repeat(auto-fill,minmax(175px,1fr)); gap:18px; }
+            .search-container { max-width:760px; }
+            #mini-player { bottom:90px; }
+        }
+        @media (max-width:380px) {
+            .p-top-actions { gap:4px; }
+            .p-top-actions i { width:32px; height:32px; font-size:.9rem; }
+            .p-album-art { width:min(68vw,270px); }
+            #player-view { padding:14px 16px; }
+        }
+
+        /* Player stabile: niente scroll o chiusura accidentale con swipe verticale. */
+        #player-view {
+            height: 100vh;
+            height: 100dvh;
+            box-sizing: border-box;
+            overflow: hidden;
+            overscroll-behavior: none;
+            touch-action: pan-x;
+            gap: clamp(3px, 1.1vh, 10px);
+            padding-top: max(12px, env(safe-area-inset-top));
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+        }
+        #player-view > * { flex-shrink: 0; }
+        #player-view .p-top-bar { flex-shrink: 0; }
+        #player-view .p-album-art {
+            width: min(68vw, 32dvh, 340px);
+            max-height: 32dvh;
+            margin: 0;
+            flex-shrink: 1;
+        }
+        #player-view > div[style*="text-align: center"] { min-width: 0; }
+        #player-view > div[style*="width:100%"] { flex-shrink: 0; }
+        #player-view .volume-container { margin-top: 0; }
+        #player-view .p-controls { margin-top: 0; }
+        #player-view .up-next-card { margin-top: 0; min-height: 36px; box-sizing: border-box; }
+        #player-view #youtube-fallback { flex-shrink: 1; max-height: 30dvh; }
+        #player-view #youtube-fallback-note { flex-shrink: 0; }
+        @media (max-height: 700px) {
+            #player-view { gap: 3px; padding-left: 18px; padding-right: 18px; }
+            #player-view .p-album-art { width: min(56vw, 25dvh, 260px); max-height: 25dvh; }
+            #player-view .main-btn { width: 50px; height: 50px; }
+            #player-view .p-controls > div { gap: 18px !important; }
+            #player-view .up-next-card { padding-top: 6px; padding-bottom: 6px; }
+        }
+        @media (hover: none) {
+            #player-view { -webkit-user-select: none; user-select: none; }
+        }
+
     </style>
 </head>
 <body onload="init()">
@@ -633,10 +739,11 @@
     <!-- PLAYER FULL VIEW -->
     <div id="player-view">
         <div class="p-top-bar">
-            <i class="fal fa-chevron-down" onclick="history.back()" style="font-size: 1.5rem; cursor:pointer;"></i>
+            <i class="fas fa-times" onclick="history.back()" title="Chiudi player" aria-label="Chiudi player" style="font-size: 1.35rem; cursor:pointer;"></i>
             
             <div class="p-top-actions">
-                <i id="p-queue-btn" class="fal fa-list-music" onclick="openInteractiveQueue()"></i>
+                <i id="p-sleep-btn" class="far fa-clock" onclick="openSleepTimer()" title="Timer di spegnimento" aria-label="Timer di spegnimento"></i>
+                <i id="p-queue-btn" class="fas fa-list-ol" onclick="openInteractiveQueue()" title="Coda di riproduzione" aria-label="Coda di riproduzione"></i>
                 <i id="p-lyrics-btn" class="fal fa-quote-right" onclick="fetchLyrics()"></i>
                 <i id="p-fav-btn" class="fas fa-heart" onclick="toggleCurrentFavorite()"></i>
                 <i class="fab fa-instagram" onclick="shareToInstagramStory()" style="color: #e1306c !important;"></i>
@@ -712,6 +819,37 @@
         <h3 style="margin-top:0; color:var(--primary-purple)">Coda di Riproduzione</h3>
         <div id="queue-container" style="padding: 10px 0;"></div>
         <button class="primary-btn" style="margin-top:15px" onclick="closeAllSheets()">Chiudi</button>
+    </div>
+
+    <div class="bottom-sheet" id="sheet-sleep" style="max-height:85vh; overflow-y:auto;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <div>
+                <h3 style="margin:0 0 5px;">Timer di spegnimento</h3>
+                <p style="margin:0;color:var(--text-dim);font-size:.83rem;">La musica si fermerà automaticamente.</p>
+            </div>
+            <i class="far fa-clock" style="font-size:1.4rem;color:#c084fc;"></i>
+        </div>
+        <div class="sleep-presets">
+            <button class="sleep-preset" onclick="setSleepTimer(15)">15 min</button>
+            <button class="sleep-preset" onclick="setSleepTimer(30)">30 min</button>
+            <button class="sleep-preset" onclick="setSleepTimer(45)">45 min</button>
+            <button class="sleep-preset" onclick="setSleepTimer(60)">1 ora</button>
+            <button class="sleep-preset" onclick="setSleepTimer(90)">1 ora e ½</button>
+            <button class="sleep-preset" onclick="setSleepTimer(120)">2 ore</button>
+            <button class="sleep-preset" onclick="setSleepTimer(180)">3 ore</button>
+            <button class="sleep-preset" onclick="setSleepTimer(240)">4 ore</button>
+            <button class="sleep-preset" onclick="setSleepTimer(360)">6 ore</button>
+        </div>
+        <label for="sleep-custom-hours" style="font-size:.85rem;font-weight:700;">Oppure scegli quante ore</label>
+        <div class="sleep-custom-row">
+            <input type="number" id="sleep-custom-hours" min="0.1" max="24" step="0.1" value="2" aria-label="Ore prima della pausa">
+            <button class="primary-btn" style="width:auto;margin:0;padding:13px 18px;white-space:nowrap;" onclick="setCustomSleepTimer()">Avvia</button>
+        </div>
+        <p id="sleep-timer-status" class="sleep-status" aria-live="polite">Nessun timer attivo.</p>
+        <div style="display:flex;gap:10px;margin-top:10px;">
+            <button class="primary-btn" style="background:rgba(255,255,255,.08);color:white;margin:0;" onclick="cancelSleepTimer()">Disattiva timer</button>
+            <button class="primary-btn" style="margin:0;" onclick="closeAllSheets()">Fatto</button>
+        </div>
     </div>
 
     <audio id="audio-engine" crossorigin="anonymous"></audio>
@@ -1053,6 +1191,10 @@
         let isShuffle = false;
         let isLoop = false;
         let lastVolume = 1;
+        let sleepTimerTimeout = null;
+        let sleepTimerInterval = null;
+        let sleepTimerEndAt = 0;
+        let sleepFadeInterval = null;
 
         let syncedLyrics = [];
         let currentLyricIndex = -1;
@@ -1370,6 +1512,108 @@
                 return [];
             }
         }
+
+        function openSleepTimer() {
+            updateSleepTimerStatus();
+            openSheet('sleep');
+        }
+
+        function setCustomSleepTimer() {
+            const hours = Number(document.getElementById('sleep-custom-hours').value);
+            if (!Number.isFinite(hours) || hours < 0.1 || hours > 24) {
+                document.getElementById('sleep-timer-status').textContent = 'Inserisci un valore compreso tra 0,1 e 24 ore.';
+                return;
+            }
+            setSleepTimer(Math.round(hours * 60));
+        }
+
+        function setSleepTimer(minutes) {
+            minutes = Number(minutes);
+            if (!Number.isFinite(minutes) || minutes <= 0) return;
+            clearTimeout(sleepTimerTimeout);
+            clearInterval(sleepTimerInterval);
+            clearInterval(sleepFadeInterval);
+            sleepTimerEndAt = Date.now() + minutes * 60 * 1000;
+            sleepTimerInterval = setInterval(updateSleepTimerStatus, 1000);
+            sleepTimerTimeout = setTimeout(beginSleepFadeOut, minutes * 60 * 1000);
+            updateSleepTimerStatus();
+            const status = document.getElementById('sleep-timer-status');
+            if (status) status.textContent = `Timer attivo: pausa tra ${formatSleepRemaining(sleepTimerEndAt - Date.now())}.`;
+        }
+
+        function formatSleepRemaining(ms) {
+            const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            if (hours) return `${hours} h ${String(minutes).padStart(2, '0')} min`;
+            if (minutes) return `${minutes} min ${String(seconds).padStart(2, '0')} s`;
+            return `${seconds} s`;
+        }
+
+        function updateSleepTimerStatus() {
+            const button = document.getElementById('p-sleep-btn');
+            const status = document.getElementById('sleep-timer-status');
+            if (!sleepTimerEndAt) {
+                if (button) { button.classList.remove('active-mode'); button.title = 'Timer di spegnimento'; button.setAttribute('aria-label', 'Timer di spegnimento'); }
+                if (status) status.textContent = 'Nessun timer attivo.';
+                return;
+            }
+            const remaining = sleepTimerEndAt - Date.now();
+            if (remaining <= 0) return;
+            const label = `Pausa tra ${formatSleepRemaining(remaining)}`;
+            if (button) { button.classList.add('active-mode'); button.title = label; button.setAttribute('aria-label', label); }
+            if (status) status.textContent = `Timer attivo · ${label}. Puoi chiuderlo o disattivarlo quando vuoi.`;
+        }
+
+        function cancelSleepTimer() {
+            clearTimeout(sleepTimerTimeout);
+            clearInterval(sleepTimerInterval);
+            clearInterval(sleepFadeInterval);
+            sleepTimerTimeout = sleepTimerInterval = sleepFadeInterval = null;
+            sleepTimerEndAt = 0;
+            audio.volume = Number(document.getElementById('vol-slider')?.value ?? lastVolume ?? 1);
+            updateSleepTimerStatus();
+            closeAllSheets();
+        }
+
+        function beginSleepFadeOut() {
+            clearInterval(sleepTimerInterval);
+            sleepTimerInterval = null;
+            sleepTimerEndAt = 0;
+            updateSleepTimerStatus();
+            const startingVolume = audio.volume;
+            const startedAt = Date.now();
+            const fadeDuration = 12000;
+            const status = document.getElementById('sleep-timer-status');
+            if (status) status.textContent = 'Buonanotte 🌙 Sto sfumando la musica e poi la metto in pausa.';
+            clearInterval(sleepFadeInterval);
+            sleepFadeInterval = setInterval(() => {
+                const progress = Math.min(1, (Date.now() - startedAt) / fadeDuration);
+                audio.volume = Math.max(0, startingVolume * (1 - progress));
+                if (progress >= 1) {
+                    clearInterval(sleepFadeInterval);
+                    sleepFadeInterval = null;
+                    audio.pause();
+                    audio.volume = Number(document.getElementById('vol-slider')?.value ?? lastVolume ?? 1);
+                    const fallback = document.getElementById('player-view');
+                    if (fallback && fallback.classList.contains('youtube-fallback-active')) clearYouTubeFallback();
+                    showPausedState();
+                    sleepTimerTimeout = null;
+                    sleepTimerInterval = null;
+                    sleepTimerEndAt = 0;
+                    const button = document.getElementById('p-sleep-btn');
+                    if (button) { button.classList.remove('active-mode'); button.title = 'Timer di spegnimento'; button.setAttribute('aria-label', 'Timer di spegnimento'); }
+                    const statusEl = document.getElementById('sleep-timer-status');
+                    if (statusEl) statusEl.textContent = 'Musica in pausa. Buonanotte!';
+                }
+            }, 200);
+        }
+
+        window.openSleepTimer = openSleepTimer;
+        window.setSleepTimer = setSleepTimer;
+        window.setCustomSleepTimer = setCustomSleepTimer;
+        window.cancelSleepTimer = cancelSleepTimer;
 
         function openAlbum(albumName) {
             const albumInfo = ALBUM_DATA[albumName];
@@ -1783,6 +2027,7 @@
         }
 
         function setVolume(val) {
+            lastVolume = Number(val);
             audio.volume = val;
             const icon = document.getElementById('vol-icon');
             if (val == 0) {
