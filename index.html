@@ -126,6 +126,16 @@
             flex-shrink: 0;
         }
         .search-btn-trigger:active { transform: scale(0.9); }
+        .search-clear-btn {
+            display:none; flex-shrink:0; align-items:center; justify-content:center;
+            width:34px; height:34px; border:0; border-radius:50%; margin:0 5px;
+            color:var(--text-dim); background:rgba(255,255,255,.07); cursor:pointer;
+            transition:background .2s ease, color .2s ease, transform .2s ease;
+        }
+        .search-clear-btn.visible { display:flex; }
+        .search-clear-btn:hover { color:white; background:rgba(255,255,255,.14); }
+        .search-clear-btn:active { transform:scale(.9); }
+        .home-shelf[hidden] { display:none !important; }
 
         .music-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
         .music-card { 
@@ -450,6 +460,19 @@
         .search-container input { min-width: 0; margin-left: 8px; font-size: .92rem; }
         .search-btn-trigger { width: 42px; height: 42px; border-radius: 50%; background: #a855f7; }
         .music-grid { gap: 12px; }
+        /* Sezioni musicali scorrevoli della Home */
+        .home-shelf { margin: 24px 0 28px; }
+        .home-shelf-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 12px; }
+        .home-shelf-heading h2 { margin:0; font-size:1.08rem; font-weight:800; letter-spacing:-.25px; }
+        .home-shelf-subtitle { color:var(--text-dim); font-size:.78rem; margin:5px 0 0; }
+        .horizontal-track-list { display:flex !important; gap:12px !important; overflow-x:auto; overflow-y:hidden; padding:2px 2px 12px; margin-right:-4px; scroll-snap-type:x proximity; scrollbar-width:thin; -webkit-overflow-scrolling:touch; }
+        .horizontal-track-list .music-card { flex:0 0 148px; width:148px; min-width:148px; scroll-snap-align:start; }
+        .horizontal-track-list .music-card img { width:100%; aspect-ratio:1/1; object-fit:cover; }
+        .shelf-empty { color:var(--text-dim); font-size:.84rem; padding:12px 2px; }
+        .shelf-status { color:var(--text-dim); font-size:.78rem; padding:8px 2px; }
+        @media (min-width:768px) {
+            .horizontal-track-list .music-card { flex-basis:172px; width:172px; min-width:172px; }
+        }
         .music-card, .album-item { padding: 10px; border-radius: 17px; background: rgba(255,255,255,.035); border-color: rgba(255,255,255,.065); backdrop-filter: none; }
         .music-card:hover, .album-item:hover { background: rgba(255,255,255,.075); border-color: rgba(255,255,255,.13); transform: translateY(-2px); }
         .music-card img, .album-item img { border-radius: 12px; box-shadow: none; }
@@ -553,11 +576,25 @@
             </div>
         </header>
         <div class="search-container">
-            <input type="text" id="search-input" placeholder="Cerca musica senza pubblicità (Internet Archive + Audius)..." onkeypress="handleSearchKeyPress(event)">
-            <button class="search-btn-trigger" onclick="triggerSearch()">
+            <input type="text" id="search-input" placeholder="Cerca musica senza pubblicità (Internet Archive + Audius)..." onkeypress="handleSearchKeyPress(event)" oninput="updateSearchClearButton()">
+            <button type="button" id="search-clear-btn" class="search-clear-btn" aria-label="Cancella ricerca" title="Cancella ricerca" onclick="clearSearch()">
+                <i class="fas fa-times"></i>
+            </button>
+            <button class="search-btn-trigger" onclick="triggerSearch()" aria-label="Cerca">
                 <i class="fal fa-search"></i>
             </button>
         </div>
+        <section class="home-shelf" id="recent-listened-section" aria-labelledby="recent-listened-title">
+            <div class="home-shelf-heading">
+                <div>
+                    <h2 id="recent-listened-title">Ascoltate di recente</h2>
+                    <p class="home-shelf-subtitle">Riprendi da dove avevi lasciato</p>
+                </div>
+            </div>
+            <div class="music-grid horizontal-track-list" id="recently-played-list">
+                <p class="shelf-empty">Le canzoni che ascolti appariranno qui.</p>
+            </div>
+        </section>
         <div class="music-grid" id="home-grid"></div>
     </div>
 
@@ -1014,6 +1051,13 @@
         window.savePlaylistsToCloud = async function() {
             if (!currentUser) return;
             try {
+                const usedIds = new Set(Object.values(window.playlists || {}).flat().map(id => String(id)));
+                for (const song of (window.__dynamicSongs || [])) {
+                    if (usedIds.has(String(song.id))) {
+                        if (!window.sharedSongs) window.sharedSongs = {};
+                        window.sharedSongs[String(song.id)] = { ...song };
+                    }
+                }
                 await setDoc(doc(db, "users", currentUser.uid), {
                     playlists: window.playlists,
                     sharedSongs: window.sharedSongs || {}
@@ -1202,11 +1246,12 @@
                 const recipientUid = friendSnap.data().uid;
                 if (recipientUid === currentUser.uid) { alert('Non puoi condividere una playlist con te stesso.'); return; }
                 const songIds = window.playlists[currentPlaylistName] || [];
-                const songPool = [...ALL_SONGS, ...(window.__dynamicSongs || []), ...Object.values(window.sharedSongs || {})];
+                const songPool = getSongPool();
                 const songs = songIds.map(id => songPool.find(song => String(song.id) === String(id))).filter(Boolean).map(song => ({
                     title: String(song.title || 'Brano'), artist: String(song.artist || 'Artista'), img: String(song.img || ''),
                     file: String(song.file || ''), videoId: song.videoId || null, isYouTube: !!song.isYouTube,
-                    isInternetArchive: !!song.isInternetArchive, archiveUrl: song.archiveUrl || null
+                    isInternetArchive: !!song.isInternetArchive, archiveUrl: song.archiveUrl || null,
+                    isAudius: !!song.isAudius, audiusId: song.audiusId || null, audiusUrl: song.audiusUrl || null
                 }));
                 if (!songs.length) { alert('Questa playlist non contiene brani condivisibili.'); return; }
                 await addDoc(collection(db, 'sharedPlaylists'), {
@@ -1231,6 +1276,7 @@
                 const id = `shared-${sharedId}-${index}`;
                 const savedSong = { ...song, id };
                 if (!ALL_SONGS.some(existing => String(existing.id) === id)) ALL_SONGS.push(savedSong);
+                rememberDynamicSong(savedSong);
                 if (!window.sharedSongs) window.sharedSongs = {};
                 window.sharedSongs[id] = savedSong;
                 ids.push(id);
@@ -1368,6 +1414,11 @@
 
         let syncedLyrics = [];
         let currentLyricIndex = -1;
+        // Cache breve per evitare richieste ripetute alle API durante la navigazione.
+        const musicSearchCache = new Map();
+        const MUSIC_SEARCH_CACHE_TTL = 5 * 60 * 1000;
+        let activeSearchRequestId = 0;
+        const lyricsCache = new Map();
 
         let audioCtx, audioSource, eqLow, eqMid, eqHigh;
 
@@ -1440,8 +1491,54 @@
             return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
         }
 
+        const RECENT_TRACKS_STORAGE_KEY = 'purpl3l3an_recent_tracks_v1';
+        const RECENT_TRACKS_LIMIT = 12;
+
+        function getRecentTracks() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(RECENT_TRACKS_STORAGE_KEY) || '[]');
+                return Array.isArray(saved) ? saved.filter(song => song && song.id && song.title) : [];
+            } catch (_) { return []; }
+        }
+
+        function addToRecentTracks(song) {
+            if (!song || !song.id || !song.title) return;
+            const recent = getRecentTracks().filter(item => item.id !== song.id);
+            recent.unshift({
+                id: song.id, title: song.title, artist: song.artist || 'Artista sconosciuto', img: song.img || '',
+                file: song.file || '', url: song.url || '', videoId: song.videoId || '', isYouTube: !!song.isYouTube,
+                isInternetArchive: !!song.isInternetArchive, archiveUrl: song.archiveUrl || '',
+                isAudius: !!song.isAudius, audiusId: song.audiusId || ''
+            });
+            try { localStorage.setItem(RECENT_TRACKS_STORAGE_KEY, JSON.stringify(recent.slice(0, RECENT_TRACKS_LIMIT))); }
+            catch (err) { console.warn('Impossibile salvare gli ascolti recenti:', err); }
+            renderRecentTracks();
+        }
+
+        function renderRecentTracks() {
+            const container = document.getElementById('recently-played-list');
+            if (!container) return;
+            const recent = getRecentTracks();
+            if (!recent.length) {
+                container.innerHTML = '<p class="shelf-empty">Le canzoni che ascolti appariranno qui.</p>';
+                return;
+            }
+            renderGrid(recent, 'recently-played-list');
+        }
+
+        function isLikelyPodcastItem(item, meta) {
+            const metadata = (meta && meta.metadata) || {};
+            const text = [item.title, item.description, item.subject, item.collection,
+                metadata.title, metadata.description, metadata.subject, metadata.collection]
+                .flat().filter(Boolean).join(' ').toLowerCase();
+            return /\b(podcast|podcasts|episode|episodio|episodi|talk show|radio show|radio programme|radio program|interview|intervista|lecture|lezione|audiobook|audiolibro|sermon|predica|news bulletin|daily news)\b/i.test(text);
+        }
+
         function init() {
             renderGrid(ALL_SONGS, 'home-grid');
+            renderRecentTracks();
+            updateSearchClearButton();
+            setSearchMode(false);
             
             // In sviluppo locale disattiviamo il vecchio Service Worker: può conservare
             // richieste/codice obsoleti e generare errori fetch non gestiti.
@@ -1541,17 +1638,52 @@
             }
         }
 
+        function updateSearchClearButton() {
+            const input = document.getElementById('search-input');
+            const clearButton = document.getElementById('search-clear-btn');
+            if (!input || !clearButton) return;
+            clearButton.classList.toggle('visible', input.value.length > 0);
+        }
+
+        function setSearchMode(active) {
+            const recentSection = document.getElementById('recent-listened-section');
+            if (recentSection) recentSection.hidden = !!active;
+            const grid = document.getElementById('home-grid');
+            if (grid) grid.hidden = false;
+        }
+
+        function clearSearch() {
+            activeSearchRequestId++;
+            const input = document.getElementById('search-input');
+            if (!input) return;
+            input.value = '';
+            updateSearchClearButton();
+            setSearchMode(false);
+            renderGrid(ALL_SONGS, 'home-grid');
+            input.focus();
+        }
+
         function triggerSearch() {
             const inputVal = document.getElementById('search-input').value.trim();
+            updateSearchClearButton();
             if (!inputVal) {
+                activeSearchRequestId++;
+                setSearchMode(false);
                 renderGrid(ALL_SONGS, 'home-grid');
                 return;
             }
-
+            setSearchMode(true);
             searchPiped(inputVal);
         }
 
         async function searchPiped(query) {
+            const normalizedQuery = String(query || '').trim().toLowerCase();
+            const requestId = ++activeSearchRequestId;
+            const cached = musicSearchCache.get(normalizedQuery);
+            if (cached && Date.now() - cached.timestamp < MUSIC_SEARCH_CACHE_TTL) {
+                renderGrid(cached.results, 'home-grid');
+                return;
+            }
             // Ricerca alternativa senza Piped/YouTube: catalogo audio pubblico di Internet Archive.
             // Le API JSON supportano richieste dal browser; i file audio vengono caricati direttamente
             // dall'elemento <audio>, senza fetch dei byte e senza proxy.
@@ -1621,7 +1753,10 @@
                 // Audius è la seconda fonte: catalogo dedicato alla musica con API pubblica.
                 // Il suo errore non blocca i risultati di Internet Archive (e viceversa).
                 const audiusResults = await searchAudius(query);
-                const results = [...localFiltered, ...archiveResults, ...audiusResults];
+                const results = dedupeSongs([...localFiltered, ...archiveResults, ...audiusResults]);
+                musicSearchCache.set(normalizedQuery, { timestamp: Date.now(), results });
+                if (musicSearchCache.size > 30) musicSearchCache.delete(musicSearchCache.keys().next().value);
+                if (requestId !== activeSearchRequestId) return;
                 renderGrid(results, 'home-grid');
 
                 if (!archiveResults.length && !audiusResults.length) {
@@ -1636,10 +1771,15 @@
                     grid.appendChild(note);
                 }
             } catch (err) {
+                if (requestId !== activeSearchRequestId) return;
                 console.error('Ricerca Internet Archive non riuscita:', err);
                 // Se Internet Archive è irraggiungibile, proviamo comunque Audius.
                 const audiusResults = await searchAudius(query);
-                renderGrid([...localFiltered, ...audiusResults], 'home-grid');
+                const results = dedupeSongs([...localFiltered, ...audiusResults]);
+                musicSearchCache.set(normalizedQuery, { timestamp: Date.now(), results });
+                if (musicSearchCache.size > 30) musicSearchCache.delete(musicSearchCache.keys().next().value);
+                if (requestId !== activeSearchRequestId) return;
+                renderGrid(results, 'home-grid');
                 const note = document.createElement('div');
                 note.style.cssText = 'padding:18px;color:var(--text-dim);font-size:.85rem;';
                 note.textContent = audiusResults.length
@@ -1674,7 +1814,8 @@
                         file: `https://api.audius.co/v1/tracks/${encodeURIComponent(track.id)}/stream`,
                         isYouTube: false,
                         isAudius: true,
-                        audiusUrl: track.permalink || (track.user && track.user.handle ? `https://audius.co/${track.user.handle}/${track.title}` : 'https://audius.co')
+                        audiusId: String(track.id),
+                        audiusUrl: track.permalink || (track.user && track.user.handle ? `https://audius.co/${track.user.handle}/${encodeURIComponent(track.title)}` : 'https://audius.co')
                     };
                 });
             } catch (err) {
@@ -1893,6 +2034,32 @@
             return String(value ?? '').replace(/[&<>\"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;' }[char]));
         }
 
+        function dedupeSongs(songs) {
+            const seen = new Set();
+            return (Array.isArray(songs) ? songs : []).filter(song => {
+                if (!song || !song.id || seen.has(String(song.id))) return false;
+                seen.add(String(song.id));
+                return true;
+            });
+        }
+
+        function getSongPool() {
+            return [...ALL_SONGS, ...(window.__dynamicSongs || []), ...Object.values(window.sharedSongs || {})];
+        }
+
+        function findSongById(songId) {
+            return getSongPool().find(song => String(song.id) === String(songId)) || null;
+        }
+
+        function rememberDynamicSong(song) {
+            if (!song || !song.id) return;
+            if (ALL_SONGS.some(existing => String(existing.id) === String(song.id))) return;
+            if (!window.__dynamicSongs) window.__dynamicSongs = [];
+            const idx = window.__dynamicSongs.findIndex(existing => String(existing.id) === String(song.id));
+            if (idx >= 0) window.__dynamicSongs[idx] = { ...song };
+            else window.__dynamicSongs.push({ ...song });
+        }
+
         function renderGrid(songs, containerId, isPlaylist = false) {
             const grid = document.getElementById(containerId);
             grid.innerHTML = '';
@@ -1900,6 +2067,7 @@
             const favs = window.playlists['Preferiti'] || [];
 
             songs.forEach(song => {
+                rememberDynamicSong(song);
                 const card = document.createElement('div');
                 card.className = 'music-card';
                 
@@ -1918,7 +2086,7 @@
                             <i class="fas ${btnIcon}"></i>
                         </button>
                     </div>
-                    <img src="${escapeHTML(song.img)}" loading="lazy" alt="">
+                    <img src="${escapeHTML(song.img)}" loading="lazy" decoding="async" alt="">
                     <p style="margin:10px 0 2px; font-weight:bold; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(song.title)}</p>
                     <p style="margin:0; font-size:0.75rem; color:var(--text-dim);">${escapeHTML(song.artist)}</p>
                 `;
@@ -2007,6 +2175,7 @@
 
             clearYouTubeFallback();
             if (fadeInOnNextPlay) audio.volume = 0;
+            addToRecentTracks(song);
             window.playCounts[song.id] = (window.playCounts[song.id] || 0) + 1;
             window.savePlayCountsToCloud();
 
@@ -2412,7 +2581,12 @@
                     btn.style.boxShadow = 'none';
                     btn.innerText = pName;
                     btn.onclick = () => {
-                        if (!window.playlists[pName].includes(songId)) {
+                        const song = findSongById(songId);
+                        if (song && !ALL_SONGS.some(existing => String(existing.id) === String(song.id))) {
+                            if (!window.sharedSongs) window.sharedSongs = {};
+                            window.sharedSongs[String(song.id)] = { ...song };
+                        }
+                        if (!window.playlists[pName].some(id => String(id) === String(songId))) {
                             window.playlists[pName].push(songId);
                             window.savePlaylistsToCloud();
                         }
@@ -2460,7 +2634,7 @@
             }
 
             const ids = window.playlists[pName] || [];
-            const songs = ids.map(id => ALL_SONGS.find(s => String(s.id) === String(id))).filter(Boolean);
+            const songs = ids.map(id => findSongById(id)).filter(Boolean);
 
             renderGrid(songs, 'detail-grid', true);
 
@@ -2546,63 +2720,158 @@
             const song = currentQueue[currentIndex];
             if (!song) return;
 
-            document.getElementById('lyrics-title').innerText = `${song.title} - Testo`;
             const container = document.getElementById('lyrics-container');
-            container.innerHTML = '<p style="color:var(--text-dim);">Caricamento testo...</p>';
+            document.getElementById('lyrics-title').innerText = `${song.title} - Testo`;
+            container.textContent = 'Caricamento testo…';
+            syncedLyrics = [];
+            currentLyricIndex = -1;
             openSheet('lyrics');
 
-            try {
-                const res = await fetch(`https://api.lrclib.net/api/get?artist_name=${encodeURIComponent(song.artist)}&track_name=${encodeURIComponent(song.title)}`);
-                if (!res.ok) throw new Error("Testo non trovato");
-                const data = await res.json();
+            const cacheKey = `${String(song.artist || '').toLowerCase()}::${String(song.title || '').toLowerCase()}`;
+            const cached = lyricsCache.get(cacheKey);
+            if (cached && Date.now() - cached.timestamp < 24 * 60 * 60 * 1000) {
+                displayLyricsResult(cached.data);
+                return;
+            }
 
-                if (data.syncedLyrics) {
-                    parseSyncedLyrics(data.syncedLyrics);
-                } else if (data.plainLyrics) {
-                    syncedLyrics = [];
-                    container.innerHTML = `<p style="white-space: pre-line;">${data.plainLyrics}</p>`;
-                } else {
-                    container.innerHTML = '<p style="color:var(--text-dim);">Testo non disponibile per questo brano.</p>';
+            const cleanTitle = cleanLyricsQuery(song.title);
+            const cleanArtist = cleanLyricsQuery(song.artist);
+            const duration = Number.isFinite(Number(audio.duration)) && Number(audio.duration) > 0
+                ? Math.round(Number(audio.duration)) : null;
+            const queries = [];
+            const exactParams = new URLSearchParams({ track_name: cleanTitle, artist_name: cleanArtist });
+            if (duration && duration <= 3600) exactParams.set('duration', String(duration));
+            queries.push(`https://lrclib.net/api/get?${exactParams.toString()}`);
+            const searchParams = new URLSearchParams({ track_name: cleanTitle, artist_name: cleanArtist });
+            queries.push(`https://lrclib.net/api/search?${searchParams.toString()}`);
+            // Titoli di cataloghi esterni spesso includono versioni, feat. o codici: fallback più largo.
+            queries.push(`https://lrclib.net/api/search?q=${encodeURIComponent(`${cleanArtist} ${cleanTitle}`)}`);
+
+            try {
+                let chosen = null;
+                for (const url of queries) {
+                    try {
+                        const response = await fetchWithTimeout(url, { headers: { 'Accept': 'application/json' } }, 7000);
+                        if (!response.ok) continue;
+                        const payload = await response.json();
+                        const candidates = Array.isArray(payload) ? payload : (payload && (payload.plainLyrics || payload.syncedLyrics) ? [payload] : []);
+                        chosen = chooseBestLyricsMatch(candidates, cleanTitle, cleanArtist);
+                        if (chosen) break;
+                    } catch (error) {
+                        console.debug('Tentativo testo non riuscito:', error.message || error);
+                    }
                 }
-            } catch (err) {
-                container.innerHTML = '<p style="color:var(--text-dim);">Impossibile recuperare il testo per questa canzone.</p>';
+                if (!chosen) {
+                    container.textContent = 'Testo non disponibile per questo brano. Prova con il titolo e l’artista originali.';
+                    return;
+                }
+                lyricsCache.set(cacheKey, { timestamp: Date.now(), data: chosen });
+                displayLyricsResult(chosen);
+            } catch (error) {
+                console.warn('Recupero testo non riuscito:', error);
+                container.textContent = 'Impossibile recuperare il testo. Controlla la connessione e riprova.';
+            }
+        }
+
+        function cleanLyricsQuery(value) {
+            return String(value || '')
+                .replace(/\s*\((official|audio|lyrics?|visuali[sz]er|video|remaster(ed)?)[^)]*\)/ig, '')
+                .replace(/\s*\[(official|audio|lyrics?|visuali[sz]er|video|remaster(ed)?)[^\]]*\]/ig, '')
+                .replace(/\s+(feat\.?|ft\.?|featuring)\s+.*/i, '')
+                .replace(/\s+/g, ' ').trim();
+        }
+
+        async function fetchWithTimeout(url, options = {}, timeoutMs = 7000) {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                return await fetch(url, { ...options, headers: { 'Accept': 'application/json', 'X-User-Agent': 'Purpl3L3an/1.0 (music player)', ...(options.headers || {}) }, signal: controller.signal, cache: 'default' });
+            } finally {
+                clearTimeout(timeout);
+            }
+        }
+
+        function chooseBestLyricsMatch(candidates, title, artist) {
+            if (!Array.isArray(candidates) || !candidates.length) return null;
+            const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+            const targetTitle = normalize(title);
+            const targetArtist = normalize(artist);
+            let best = null, bestScore = -1;
+            for (const item of candidates) {
+                if (!item || (!item.plainLyrics && !item.syncedLyrics)) continue;
+                const candidateTitle = normalize(item.trackName || item.name);
+                const candidateArtist = normalize(item.artistName);
+                let score = 0;
+                if (candidateTitle === targetTitle) score += 5;
+                else if (candidateTitle.includes(targetTitle) || targetTitle.includes(candidateTitle)) score += 2;
+                if (candidateArtist === targetArtist) score += 4;
+                else if (candidateArtist && targetArtist && (candidateArtist.includes(targetArtist) || targetArtist.includes(candidateArtist))) score += 2;
+                if (item.syncedLyrics) score += 1;
+                if (score > bestScore) { best = item; bestScore = score; }
+            }
+            return bestScore >= 2 ? best : null;
+        }
+
+        function displayLyricsResult(data) {
+            const container = document.getElementById('lyrics-container');
+            syncedLyrics = [];
+            currentLyricIndex = -1;
+            if (data.syncedLyrics) {
+                parseSyncedLyrics(data.syncedLyrics);
+                if (syncedLyrics.length) return;
+            }
+            if (data.plainLyrics) {
+                // textContent evita che metadati/testi esterni possano inserire HTML.
+                container.textContent = '';
+                const lyricsText = document.createElement('p');
+                lyricsText.style.whiteSpace = 'pre-line';
+                lyricsText.textContent = data.plainLyrics;
+                container.appendChild(lyricsText);
+            } else if (data.instrumental) {
+                container.textContent = 'Questo brano risulta strumentale e non ha un testo disponibile.';
+            } else {
+                container.textContent = 'Testo non disponibile per questo brano.';
             }
         }
 
         function parseSyncedLyrics(lrcText) {
             syncedLyrics = [];
-            const lines = lrcText.split('\n');
-            const regex = /\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/;
-
-            lines.forEach(line => {
-                const match = line.match(regex);
-                if (match) {
-                    const min = parseInt(match[1]);
-                    const sec = parseInt(match[2]);
-                    const ms = parseInt(match[3].padEnd(3, '0'));
-                    const time = min * 60 + sec + ms / 1000;
-                    const text = match[4].trim();
-                    if (text) syncedLyrics.push({ time, text });
+            const lines = String(lrcText || '').split(/\r?\n/);
+            const regex = /\[(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?\]/g;
+            for (const line of lines) {
+                const matches = [...line.matchAll(regex)];
+                const text = line.replace(regex, '').trim();
+                if (!text || !matches.length) continue;
+                for (const match of matches) {
+                    const min = Number.parseInt(match[1], 10) || 0;
+                    const sec = Number.parseInt(match[2], 10) || 0;
+                    const fraction = match[3] ? Number(`0.${match[3]}`) : 0;
+                    syncedLyrics.push({ time: min * 60 + sec + fraction, text });
                 }
-            });
-
+            }
+            syncedLyrics.sort((a, b) => a.time - b.time);
             renderSyncedLyricsUI();
         }
 
         function renderSyncedLyricsUI() {
             const container = document.getElementById('lyrics-container');
             container.innerHTML = '';
-
+            if (!syncedLyrics.length) {
+                container.textContent = 'Il testo sincronizzato non è disponibile.';
+                return;
+            }
+            const fragment = document.createDocumentFragment();
             syncedLyrics.forEach((line, index) => {
                 const el = document.createElement('div');
                 el.className = 'lyric-line';
                 el.id = `lyric-line-${index}`;
-                el.innerText = line.text;
+                el.textContent = line.text;
                 el.onclick = () => {
-                    audio.currentTime = line.time;
+                    if (Number.isFinite(audio.duration)) audio.currentTime = Math.min(line.time, audio.duration || line.time);
                 };
-                container.appendChild(el);
+                fragment.appendChild(el);
             });
+            container.appendChild(fragment);
         }
 
         function updateLyricsHighlight(currentTime) {
@@ -2627,7 +2896,7 @@
                     const activeEl = document.getElementById(`lyric-line-${activeIndex}`);
                     if (activeEl) {
                         activeEl.classList.add('active');
-                        activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        activeEl.scrollIntoView({ behavior: 'auto', block: 'center' });
                     }
                 }
 
