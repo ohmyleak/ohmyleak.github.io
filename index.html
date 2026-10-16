@@ -227,9 +227,44 @@
             box-shadow: 0 15px 35px rgba(0,0,0,0.6); 
             cursor: pointer;
         }
+        #mini-player { opacity: 0; transform: translateY(18px) scale(.97); transition: opacity .32s ease, transform .42s cubic-bezier(.2,.85,.25,1), border-radius .35s ease; }
+        #mini-player.is-docked { opacity: 1; transform: translateY(0) scale(1); }
+        #player-view { opacity: 0; transform: translateY(22px) scale(.985); transform-origin: 50% 90%; transition: opacity .28s ease, transform .42s cubic-bezier(.2,.85,.25,1); touch-action: pan-y; }
+        #player-view.is-open { opacity: 1; transform: translateY(0) scale(1); }
+        #player-view.is-docking { opacity: 0; transform: translateY(30px) scale(.96); pointer-events:none; }
+        .p-top-bar { touch-action: pan-y; cursor: grab; }
+        .p-top-bar:active { cursor: grabbing; }
+        .track-notes { display:flex; flex-direction:column; gap:10px; margin:12px 0; }
+        .track-note { padding:11px 13px; border:1px solid var(--card-border); border-radius:14px; background:rgba(255,255,255,.045); overflow-wrap:anywhere; }
+        .track-note-meta { display:flex; justify-content:space-between; gap:8px; color:var(--text-dim); font-size:.72rem; margin-bottom:5px; }
+        .wrapped-hero { padding:18px; border-radius:20px; margin:10px 0 16px; background:linear-gradient(135deg,rgba(168,85,247,.4),rgba(236,72,153,.24),rgba(14,165,233,.2)); border:1px solid rgba(255,255,255,.12); }
+        .wrapped-number { font-size:2rem; font-weight:900; letter-spacing:-.04em; }
+        .wrapped-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+        .wrapped-stat { padding:12px; border-radius:14px; background:rgba(255,255,255,.055); border:1px solid var(--card-border); }
+        @media (prefers-reduced-motion: reduce) { #mini-player, #player-view { transition:none !important; } }
         .mini-info { flex: 1; display: flex; align-items: center; overflow: hidden; margin-right: 10px; }
         .mini-info img { width: 46px; height: 46px; border-radius: 14px; margin-right: 12px; object-fit: cover; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         .mini-text p { margin: 0; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Sfondo animato con artwork sfocato, stile music player premium. */
+        #player-view { isolation: isolate; }
+        .player-bg-layer {
+            position: absolute; inset: -7%; z-index: 0; pointer-events: none;
+            background-position: center; background-size: cover; background-repeat: no-repeat;
+            filter: blur(48px) saturate(1.35) brightness(.48);
+            opacity: 0; transform: scale(1.08);
+            transition: opacity 1400ms cubic-bezier(.2,.7,.2,1), transform 8s ease;
+            will-change: opacity, transform;
+        }
+        .player-bg-layer.is-visible { opacity: .92; transform: scale(1.16); }
+        #player-bg-overlay {
+            position:absolute; inset:0; z-index:0; pointer-events:none;
+            background: linear-gradient(180deg, rgba(8,7,13,.38) 0%, rgba(8,7,13,.56) 45%, rgba(6,5,10,.94) 100%);
+        }
+        #player-view > :not(.player-bg-layer):not(#player-bg-overlay) { position: relative; z-index: 1; }
+        @media (prefers-reduced-motion: reduce) {
+            .player-bg-layer { transition: opacity 250ms ease; transform:none !important; }
+        }
 
         #player-view {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -318,6 +353,7 @@
 
         .lyric-line {
             padding: 8px 12px;
+            user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
             margin: 4px 0;
             border-radius: 12px;
             color: rgba(255, 255, 255, 0.4);
@@ -333,6 +369,11 @@
             text-shadow: 0 0 15px rgba(255,255,255,0.6);
             transform: scale(1.02);
         }
+        .lyric-line.story-selected {
+            color:#fff; background:rgba(168,85,247,.28); outline:1px solid rgba(216,180,254,.7);
+            box-shadow:0 0 0 3px rgba(168,85,247,.10); user-select:none;
+        }
+        .lyrics-story-hint { color:rgba(255,255,255,.62); font-size:.78rem; line-height:1.45; text-align:center; margin:8px 0 12px; }
 
         .queue-item {
             display: flex;
@@ -670,7 +711,7 @@
         </header>
         <button class="primary-btn" onclick="openSheet('create')">+ Nuova Playlist</button>
         <button class="primary-btn" style="background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 8px 20px rgba(16,185,129,0.25);" onclick="openPlaylistDetail('Preferiti')"><i class="fas fa-heart" style="margin-right:8px;"></i> Brani Preferiti</button>
-        <button class="primary-btn" style="background: linear-gradient(135deg, #14b8a6, #2dd4bf); box-shadow: 0 8px 20px rgba(45,212,191,0.25);" onclick="openSheet('stats')"><i class="fas fa-chart-line" style="margin-right:8px;"></i> La tua Top 10</button>
+        <button class="primary-btn" style="background: linear-gradient(135deg, #14b8a6, #2dd4bf); box-shadow: 0 8px 20px rgba(45,212,191,0.25);" onclick="openSheet('stats')"><i class="fas fa-chart-line" style="margin-right:8px;"></i> Purpl3 Wrapped · Top 10</button>
         <div id="playlist-list" style="margin-top:20px;"></div>
         <section style="margin-top:28px;">
             <h2 style="font-size:1.15rem;margin-bottom:12px;"><i class="fas fa-inbox" style="color:var(--primary-purple);margin-right:8px;"></i>Playlist ricevute</h2>
@@ -789,13 +830,17 @@
 
     <!-- PLAYER FULL VIEW -->
     <div id="player-view">
+        <div id="player-bg-layer-a" class="player-bg-layer is-visible" aria-hidden="true"></div>
+        <div id="player-bg-layer-b" class="player-bg-layer" aria-hidden="true"></div>
+        <div id="player-bg-overlay" aria-hidden="true"></div>
         <div class="p-top-bar">
             <i class="fas fa-times" onclick="history.back()" title="Chiudi player" aria-label="Chiudi player" style="font-size: 1.35rem; cursor:pointer;"></i>
             
             <div class="p-top-actions">
                 <i id="p-sleep-btn" class="far fa-clock" onclick="openSleepTimer()" title="Timer di spegnimento" aria-label="Timer di spegnimento"></i>
                 <i id="p-queue-btn" class="fas fa-list-ol" onclick="openInteractiveQueue()" title="Coda di riproduzione" aria-label="Coda di riproduzione"></i>
-                <i id="p-lyrics-btn" class="fal fa-quote-right" onclick="fetchLyrics()"></i>
+                <i id="p-lyrics-btn" class="fal fa-quote-right" onclick="fetchLyrics()" title="Testo della canzone"></i>
+                <i id="p-notes-btn" class="far fa-comment-dots" onclick="openTrackNotes()" title="Note e commenti"></i>
                 <i id="p-fav-btn" class="fas fa-heart" onclick="toggleCurrentFavorite()"></i>
                 <i class="fab fa-instagram" onclick="shareToInstagramStory()" style="color: #e1306c !important;"></i>
                 <i class="fal fa-download" id="p-download-btn" onclick="downloadCurrentSong()" style="color:var(--primary-purple) !important;"></i>
@@ -852,17 +897,35 @@
         <input type="text" id="new-p-name" style="width:100%; background:rgba(255,255,255,0.08); border:1px solid var(--primary-purple); padding:16px; border-radius:14px; color:white; margin-bottom:15px; font-family:inherit;" placeholder="Nome playlist...">
         <button class="primary-btn" onclick="confirmCreatePlaylist()">Crea</button>
     </div>
-    <div class="bottom-sheet" id="sheet-stats" style="max-height: 80vh; overflow-y: auto;">
-        <h3 style="margin-top:0">Le tue più ascoltate</h3>
+    <div class="bottom-sheet" id="sheet-stats" style="max-height: 85vh; overflow-y: auto;">
+        <h3 style="margin-top:0">Purpl3 Wrapped</h3>
+        <p style="color:var(--text-dim);font-size:.83rem;margin-top:-4px">Il riepilogo dei tuoi ascolti, calcolato da quando è attivo il tracciamento.</p>
+        <div style="display:flex;gap:8px;margin:12px 0">
+            <button id="wrapped-month-btn" class="primary-btn" style="margin:0;flex:1" onclick="setWrappedPeriod('month')">Questo mese</button>
+            <button id="wrapped-year-btn" class="primary-btn" style="margin:0;flex:1;background:rgba(255,255,255,.08);box-shadow:none" onclick="setWrappedPeriod('year')">Quest'anno</button>
+        </div>
+        <div id="wrapped-summary"></div>
+        <h4 style="margin:16px 0 8px">La tua Top 10</h4>
         <div id="stats-container"></div>
         <button class="primary-btn" style="margin-top:15px" onclick="closeAllSheets()">Chiudi</button>
+    </div>
+
+    <div class="bottom-sheet" id="sheet-track-notes" style="max-height:82vh;overflow-y:auto">
+        <h3 id="track-notes-title" style="margin-top:0">Note sul brano</h3>
+        <p style="font-size:.8rem;color:var(--text-dim);margin-top:-5px">Condividi una reazione breve. Accedendo, il commento sarà visibile alla community; senza account resta salvato solo su questo dispositivo.</p>
+        <div id="track-notes-list" class="track-notes"></div>
+        <textarea id="track-note-input" maxlength="280" rows="3" placeholder="Scrivi una nota (max 280 caratteri)…" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);color:white;border:1px solid var(--card-border);border-radius:14px;padding:12px;font:inherit;resize:vertical"></textarea>
+        <button class="primary-btn" style="margin-top:10px" onclick="submitTrackNote()">Pubblica nota</button>
+        <button class="primary-btn" style="margin-top:8px;background:rgba(255,255,255,.08);box-shadow:none" onclick="closeAllSheets()">Chiudi</button>
     </div>
 
     <!-- SHEET TESTI SINCRONIZZATI (KARAOKE) -->
     <div class="bottom-sheet" id="sheet-lyrics" style="max-height: 75vh; overflow-y: auto;">
         <h3 style="margin-top:0; color:var(--primary-purple)" id="lyrics-title">Testo Sincronizzato</h3>
+        <p class="lyrics-story-hint">Tieni premuta una riga per selezionarla; seleziona più righe e poi crea la tua storia Instagram.</p>
         <div id="lyrics-container" style="line-height: 1.8; color: var(--text-main); font-size: 0.95rem; font-weight: 500; text-align: center; padding: 10px 0;"></div>
-        <button class="primary-btn" style="margin-top:15px" onclick="closeAllSheets()">Chiudi</button>
+        <button class="primary-btn" style="margin-top:12px;background:linear-gradient(135deg,#a855f7,#e1306c);" onclick="shareToInstagramStory(true)"><i class="fab fa-instagram" style="margin-right:8px"></i>Crea storia con il testo selezionato</button>
+        <button class="primary-btn" style="margin-top:10px" onclick="closeAllSheets()">Chiudi</button>
     </div>
 
     <!-- SHEET CODA DI RIPRODUZIONE INTERATTIVA -->
@@ -1076,6 +1139,23 @@
             } catch (error) {
                 console.error("Errore salvataggio Top 10 su cloud:", error);
             }
+        };
+
+        window.getPurpl3CurrentUser = () => currentUser ? ({ uid: currentUser.uid, nickname: currentUser.displayName || (currentUser.email || 'utente').split('@')[0] }) : null;
+        window.subscribeTrackNotes = function(songKey, callback) {
+            const notesQuery = query(collection(db, 'trackNotes'), where('songId', '==', String(songKey)));
+            return onSnapshot(notesQuery, (snapshot) => {
+                const notes = snapshot.docs.map(item => ({ id: item.id, ...item.data() }))
+                    .sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0)).slice(0, 50);
+                callback(notes);
+            }, (error) => { console.warn('Note cloud non disponibili; controllo regole Firestore:', error); callback([]); });
+        };
+        window.publishTrackNoteCloud = async function(songKey, text, nickname) {
+            if (!currentUser) throw new Error('Accedi per pubblicare una nota condivisa.');
+            await addDoc(collection(db, 'trackNotes'), {
+                songId: String(songKey), text: String(text).slice(0, 280), nickname: String(nickname || currentUser.displayName || 'Utente').slice(0, 32),
+                uid: currentUser.uid, createdAt: Date.now()
+            });
         };
 
         onAuthStateChanged(auth, (user) => {
@@ -1407,6 +1487,12 @@
         let sleepTimerTimeout = null;
         let sleepTimerInterval = null;
         let sleepTimerEndAt = 0;
+        const LISTEN_LOG_KEY = 'purpl3l3an_listen_log_v1';
+        let wrappedPeriod = 'month';
+        let lastTrackedAudioTime = 0;
+        let currentTrackNotesKey = null;
+        let currentTrackNotesUnsubscribe = null;
+        let notesLongPressTimer = null;
         let sleepFadeInterval = null;
         let songTransitionInterval = null;
         let fadeInOnNextPlay = false;
@@ -1414,6 +1500,11 @@
 
         let syncedLyrics = [];
         let currentLyricIndex = -1;
+        let selectedStoryLyrics = new Set();
+        let lyricLongPressTimer = null;
+        let lyricLongPressTriggered = false;
+        let activePlayerBgLayer = 'a';
+        let lastPlayerBgUrl = '';
         // Cache breve per evitare richieste ripetute alle API durante la navigazione.
         const musicSearchCache = new Map();
         const MUSIC_SEARCH_CACHE_TTL = 5 * 60 * 1000;
@@ -1581,6 +1672,10 @@
             audio.onpause = () => showPausedState();
 
             audio.ontimeupdate = () => {
+                const nowTime = Number(audio.currentTime) || 0;
+                const delta = nowTime - lastTrackedAudioTime;
+                if (!audio.paused && delta > 0 && delta <= 3) recordListeningSeconds(delta);
+                lastTrackedAudioTime = nowTime;
                 if (!audio.duration || isNaN(audio.duration)) return;
                 const pct = (audio.currentTime / audio.duration) * 100;
                 document.getElementById('progress-bar').style.width = pct + '%';
@@ -1619,7 +1714,17 @@
 
         function renderPage(pageId, isBack = false) {
             document.querySelectorAll('.page-view').forEach(p => p.classList.add('hidden'));
-            document.getElementById('player-view').style.display = 'none';
+            const playerView = document.getElementById('player-view');
+            if (pageId !== 'player' && playerView && playerView.style.display === 'flex') {
+                playerView.classList.remove('is-open'); playerView.classList.add('is-docking');
+                setTimeout(() => {
+                    if (!history.state || history.state.page !== 'player') {
+                        playerView.style.display = 'none'; playerView.classList.remove('is-docking');
+                    }
+                }, 420);
+            } else if (pageId !== 'player') {
+                playerView.classList.remove('is-open', 'is-docking'); playerView.style.display = 'none';
+            }
 
             const target = document.getElementById(pageId + '-page');
             if (target) target.classList.remove('hidden');
@@ -1978,14 +2083,32 @@
         }
 
         function togglePlayerView(show) {
+            const view = document.getElementById('player-view');
+            const mini = document.getElementById('mini-player');
             if (show) {
-                if (history.state && history.state.page === 'player') return;
+                if (history.state && history.state.page === 'player') { view.classList.add('is-open'); return; }
                 history.pushState({ page: 'player' }, '', '');
-                document.getElementById('player-view').style.display = 'flex';
+                if (mini) {
+                    const rect = mini.getBoundingClientRect();
+                    view.style.transformOrigin = `${Math.max(0, Math.min(100, ((rect.left + rect.width / 2) / window.innerWidth) * 100))}% ${Math.max(0, Math.min(100, ((rect.top + rect.height / 2) / window.innerHeight) * 100))}%`;
+                }
+                view.style.display = 'flex'; view.classList.remove('is-docking');
+                requestAnimationFrame(() => requestAnimationFrame(() => view.classList.add('is-open')));
             } else {
+                view.classList.remove('is-open'); view.classList.add('is-docking');
+                setTimeout(() => { if (!history.state || history.state.page !== 'player') view.style.display = 'none'; view.classList.remove('is-docking'); }, 420);
                 history.back();
             }
         }
+
+        function enablePlayerDockGesture() {
+            const view = document.getElementById('player-view'); const bar = view?.querySelector('.p-top-bar');
+            if (!view || !bar || bar.dataset.dockBound) return; bar.dataset.dockBound = '1';
+            let startY = 0, startX = 0, pointerId = null;
+            bar.addEventListener('pointerdown', e => { if (e.target.closest('i')) return; startY=e.clientY; startX=e.clientX; pointerId=e.pointerId; });
+            bar.addEventListener('pointerup', e => { if (pointerId !== e.pointerId) return; const dy=e.clientY-startY, dx=e.clientX-startX; pointerId=null; if (dy > 75 && Math.abs(dy) > Math.abs(dx)*1.15) togglePlayerView(false); });
+        }
+        enablePlayerDockGesture();
 
         window.toggleFavorite = function(songId) {
             if (!window.playlists['Preferiti']) window.playlists['Preferiti'] = [];
@@ -2179,9 +2302,11 @@
             window.playCounts[song.id] = (window.playCounts[song.id] || 0) + 1;
             window.savePlayCountsToCloud();
 
+            lastTrackedAudioTime = 0;
             updatePlayerUI(song);
             extractDynamicColor(song.img);
             document.getElementById('mini-player').style.display = 'flex';
+            requestAnimationFrame(() => document.getElementById('mini-player')?.classList.add('is-docked'));
             showLoadingState();
             updatePlayerFavoriteState();
             updateUpNextUI();
@@ -2316,43 +2441,41 @@
             }
         }
 
+        function setAnimatedPlayerBackground(imgUrl) {
+            if (!imgUrl || imgUrl === lastPlayerBgUrl) return;
+            lastPlayerBgUrl = imgUrl;
+            const nextKey = activePlayerBgLayer === 'a' ? 'b' : 'a';
+            const next = document.getElementById(`player-bg-layer-${nextKey}`);
+            const current = document.getElementById(`player-bg-layer-${activePlayerBgLayer}`);
+            if (!next || !current) return;
+            // URL esterno assegnato come background CSS; non viene interpolato in HTML.
+            next.style.backgroundImage = `url("${String(imgUrl).replace(/["\\]/g, '')}")`;
+            requestAnimationFrame(() => {
+                next.classList.add('is-visible');
+                current.classList.remove('is-visible');
+            });
+            activePlayerBgLayer = nextKey;
+        }
+
         function extractDynamicColor(imgUrl) {
+            setAnimatedPlayerBackground(imgUrl);
+            // Mantiene un accento dinamico leggero, senza sostituire lo sfondo animato.
             const img = new Image();
             img.crossOrigin = 'Anonymous';
-            img.src = imgUrl;
-
             img.onload = function() {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = 50;
-                canvas.height = 50;
-                ctx.drawImage(img, 0, 0, 50, 50);
-
                 try {
-                    const data = ctx.getImageData(0, 0, 50, 50).data;
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                    canvas.width = 32; canvas.height = 32;
+                    ctx.drawImage(img, 0, 0, 32, 32);
+                    const data = ctx.getImageData(0, 0, 32, 32).data;
                     let r = 0, g = 0, b = 0, count = 0;
-
-                    for (let i = 0; i < data.length; i += 16) {
-                        r += data[i];
-                        g += data[i + 1];
-                        b += data[i + 2];
-                        count++;
-                    }
-
-                    r = Math.floor((r / count) * 0.7);
-                    g = Math.floor((g / count) * 0.7);
-                    b = Math.floor((b / count) * 0.7);
-
-                    const darkColor = `rgb(${r}, ${g}, ${b})`;
-                    const pView = document.getElementById('player-view');
-                    const accent = `rgb(${Math.min(255, Math.floor(r * 1.35 + 28))}, ${Math.min(255, Math.floor(g * 1.28 + 20))}, ${Math.min(255, Math.floor(b * 1.4 + 34))})`;
-                    pView.style.background = `linear-gradient(145deg, ${darkColor} 0%, ${accent} 46%, var(--bg-dark) 100%)`;
-                    pView.style.setProperty('--cover-accent', accent);
-                    pView.style.transition = 'background 700ms ease';
-                } catch (e) {
-                    console.log("Errore estrazione colore dinamico:", e);
-                }
+                    for (let i = 0; i < data.length; i += 20) { r += data[i]; g += data[i + 1]; b += data[i + 2]; count++; }
+                    const accent = `rgb(${Math.min(255, Math.floor(r / count * 1.25 + 25))}, ${Math.min(255, Math.floor(g / count * 1.25 + 18))}, ${Math.min(255, Math.floor(b / count * 1.3 + 30))})`;
+                    document.getElementById('player-view')?.style.setProperty('--cover-accent', accent);
+                } catch (e) { /* Copertine cross-origin possono impedire l'estrazione colori. */ }
             };
+            img.src = imgUrl;
         }
 
         function updatePlayerUI(data) {
@@ -2502,58 +2625,124 @@
             window.removeEventListener('touchend', endSeek);
         }
 
-        function shareToInstagramStory() {
+        async function shareToInstagramStory(useSelectedLyrics = false) {
             const song = currentQueue[currentIndex];
             if (!song) return;
+            const chosenLyrics = useSelectedLyrics
+                ? [...selectedStoryLyrics].sort((a, b) => a - b).map(index => {
+                    const line = syncedLyrics[index];
+                    if (line) return line.text;
+                    const el = document.querySelector(`[data-plain-lyric-index="${index}"]`);
+                    return el?.textContent || '';
+                }).filter(Boolean)
+                : [];
+            if (useSelectedLyrics && !chosenLyrics.length) {
+                alert('Tieni premuta una o più righe del testo per selezionarle prima di creare la storia.');
+                return;
+            }
 
             const canvas = document.createElement('canvas');
-            canvas.width = 1080;
-            canvas.height = 1920;
+            canvas.width = 1080; canvas.height = 1920;
             const ctx = canvas.getContext('2d');
-
-            const bgGradient = ctx.createLinearGradient(0, 0, 0, 1920);
-            bgGradient.addColorStop(0, '#2a104e');
-            bgGradient.addColorStop(1, '#06050a');
-            ctx.fillStyle = bgGradient;
-            ctx.fillRect(0, 0, 1080, 1920);
-
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.src = song.img;
-            img.onload = () => {
-                ctx.save();
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-                ctx.shadowBlur = 40;
-                ctx.shadowOffsetY = 20;
-                ctx.drawImage(img, 240, 400, 600, 600);
-                ctx.restore();
-
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 52px "Plus Jakarta Sans", sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(song.title, 540, 1120);
-
-                ctx.fillStyle = '#94a3b8';
-                ctx.font = '36px "Plus Jakarta Sans", sans-serif';
-                ctx.fillText(song.artist, 540, 1180);
-
-                ctx.fillStyle = '#9333ea';
-                ctx.font = '800 32px "Plus Jakarta Sans", sans-serif';
-                ctx.fillText('Purpl3L3an', 540, 1750);
-
-                canvas.toBlob(blob => {
-                    if (navigator.canShare && navigator.canShare({ files: [new File([blob], 'story.png', { type: 'image/png' })] })) {
-                        navigator.share({
-                            files: [new File([blob], 'story.png', { type: 'image/png' })]
-                        });
-                    } else {
-                        const a = document.createElement('a');
-                        a.download = `${song.title}-story.png`;
-                        a.href = canvas.toDataURL();
-                        a.click();
+            const drawStory = (img) => {
+                const bg = ctx.createLinearGradient(0, 0, 1080, 1920);
+                bg.addColorStop(0, '#24103e'); bg.addColorStop(.5, '#100d19'); bg.addColorStop(1, '#050509');
+                ctx.fillStyle = bg; ctx.fillRect(0, 0, 1080, 1920);
+                if (img) {
+                    ctx.save(); ctx.globalAlpha = .35; ctx.filter = 'blur(28px)';
+                    ctx.drawImage(img, -100, 100, 1280, 1280); ctx.restore();
+                    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 18;
+                    const size = 540; ctx.drawImage(img, 270, 250, size, size); ctx.restore();
+                }
+                ctx.textAlign = 'center'; ctx.fillStyle = '#fff';
+                ctx.font = '800 48px "Plus Jakarta Sans", sans-serif';
+                drawWrappedText(ctx, String(song.title || ''), 540, 890, 900, 60, 2);
+                ctx.fillStyle = '#d4c9e5'; ctx.font = '36px "Plus Jakarta Sans", sans-serif';
+                drawWrappedText(ctx, String(song.artist || ''), 540, 990, 900, 48, 2);
+                if (chosenLyrics.length) {
+                    const lyricText = chosenLyrics.join('\n');
+                    ctx.fillStyle = '#fff'; ctx.font = '700 43px "Plus Jakarta Sans", sans-serif';
+                    const lines = wrapCanvasText(ctx, lyricText, 850);
+                    const shown = lines.slice(0, 8);
+                    const lineHeight = 62;
+                    const startY = 1200 - (shown.length * lineHeight) / 2;
+                    ctx.save(); ctx.fillStyle = 'rgba(8,6,14,.48)'; roundedRect(ctx, 90, startY - 55, 900, shown.length * lineHeight + 100, 36); ctx.fill(); ctx.restore();
+                    ctx.fillStyle = '#fff'; shown.forEach((line, i) => ctx.fillText(line, 540, startY + i * lineHeight, 850));
+                }
+                ctx.fillStyle = '#d8b4fe'; ctx.font = '800 32px "Plus Jakarta Sans", sans-serif';
+                ctx.fillText('Purpl3L3an', 540, 1780);
+                canvas.toBlob(async blob => {
+                    if (!blob) { alert('Non sono riuscito a creare l’immagine della storia.'); return; }
+                    const file = new File([blob], 'purpl3lean-instagram-story.png', { type: 'image/png' });
+                    try {
+                        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                            await navigator.share({ files: [file], title: 'Storia Instagram' });
+                        } else {
+                            const a = document.createElement('a'); a.download = file.name;
+                            a.href = URL.createObjectURL(blob); a.click();
+                            setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+                            alert('Storia creata e scaricata. Apri Instagram e carica l’immagine nelle Storie.');
+                        }
+                    } catch (error) {
+                        if (error?.name !== 'AbortError') console.warn('Condivisione storia non riuscita:', error);
                     }
-                });
+                }, 'image/png');
             };
+            const img = new Image(); img.crossOrigin = 'anonymous';
+            img.onload = () => drawStory(img);
+            img.onerror = () => drawStory(null);
+            img.src = song.img || '';
+        }
+
+        function wrapCanvasText(ctx, text, maxWidth) {
+            const result = [];
+            String(text || '').split(/\n/).forEach(paragraph => {
+                const words = paragraph.split(/\s+/).filter(Boolean);
+                let line = '';
+                for (const word of words) {
+                    const test = line ? `${line} ${word}` : word;
+                    if (line && ctx.measureText(test).width > maxWidth) { result.push(line); line = word; }
+                    else line = test;
+                }
+                if (line) result.push(line);
+            });
+            return result;
+        }
+
+        function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 3) {
+            const lines = wrapCanvasText(ctx, text, maxWidth).slice(0, maxLines);
+            lines.forEach((line, index) => ctx.fillText(line, x, y + index * lineHeight, maxWidth));
+        }
+
+        function roundedRect(ctx, x, y, width, height, radius) {
+            ctx.beginPath(); ctx.moveTo(x + radius, y); ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius); ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height); ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius); ctx.quadraticCurveTo(x, y, x + radius, y); ctx.closePath();
+        }
+
+        function bindLyricLongPress(el, index) {
+            const start = () => {
+                lyricLongPressTriggered = false;
+                clearTimeout(lyricLongPressTimer);
+                lyricLongPressTimer = setTimeout(() => {
+                    lyricLongPressTriggered = true;
+                    if (selectedStoryLyrics.has(index)) selectedStoryLyrics.delete(index);
+                    else selectedStoryLyrics.add(index);
+                    el.classList.toggle('story-selected', selectedStoryLyrics.has(index));
+                    if (navigator.vibrate) navigator.vibrate(18);
+                }, 450);
+            };
+            const cancel = () => clearTimeout(lyricLongPressTimer);
+            el.addEventListener('pointerdown', start);
+            el.addEventListener('pointerup', cancel);
+            el.addEventListener('pointerleave', cancel);
+            el.addEventListener('pointercancel', cancel);
+            el.addEventListener('contextmenu', event => { event.preventDefault(); });
+            el.addEventListener('click', event => {
+                if (lyricLongPressTriggered) { event.preventDefault(); event.stopPropagation(); lyricLongPressTriggered = false; }
+            }, true);
         }
 
         function downloadCurrentSong() {
@@ -2681,11 +2870,110 @@
         }
 
         function closeAllSheets() {
+            if (currentTrackNotesUnsubscribe) { currentTrackNotesUnsubscribe(); currentTrackNotesUnsubscribe = null; }
             document.getElementById('overlay').classList.remove('active');
             document.querySelectorAll('.bottom-sheet').forEach(s => s.classList.remove('active'));
         }
 
+        function readListenLog() {
+            try { const value = JSON.parse(localStorage.getItem(LISTEN_LOG_KEY) || '[]'); return Array.isArray(value) ? value : []; }
+            catch (_) { return []; }
+        }
+        function saveListenLog(log) {
+            try { localStorage.setItem(LISTEN_LOG_KEY, JSON.stringify(log.slice(-12000))); } catch (_) {}
+        }
+        function recordListeningSeconds(seconds) {
+            if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 3) return;
+            const song = currentQueue[currentIndex]; if (!song || audio.paused) return;
+            const log = readListenLog();
+            const now = Date.now();
+            const day = new Date(now).toISOString().slice(0, 10);
+            const key = `${day}|${String(song.id)}`;
+            let row = log[log.length - 1];
+            if (!row || row.key !== key) {
+                row = { key, songId: String(song.id), title: song.title || 'Brano', artist: song.artist || 'Artista', date: day, seconds: 0, plays: 0 };
+                log.push(row);
+            }
+            row.seconds = (Number(row.seconds) || 0) + seconds;
+            saveListenLog(log);
+        }
+        function getWrappedRows() {
+            const now = new Date();
+            const month = now.toISOString().slice(0, 7);
+            const year = String(now.getFullYear());
+            return readListenLog().filter(row => wrappedPeriod === 'year' ? String(row.date || '').startsWith(year) : String(row.date || '').startsWith(month));
+        }
+        window.setWrappedPeriod = function(period) {
+            wrappedPeriod = period === 'year' ? 'year' : 'month';
+            document.getElementById('wrapped-month-btn').style.background = wrappedPeriod === 'month' ? 'linear-gradient(135deg,#8b5cf6,#d946ef)' : 'rgba(255,255,255,.08)';
+            document.getElementById('wrapped-year-btn').style.background = wrappedPeriod === 'year' ? 'linear-gradient(135deg,#8b5cf6,#d946ef)' : 'rgba(255,255,255,.08)';
+            renderWrappedSummary();
+        };
+        function renderWrappedSummary() {
+            const host = document.getElementById('wrapped-summary'); if (!host) return;
+            const rows = getWrappedRows();
+            const seconds = rows.reduce((sum, row) => sum + (Number(row.seconds) || 0), 0);
+            const songs = new Map(); const artists = new Map();
+            rows.forEach(row => {
+                const k = String(row.songId); const old = songs.get(k) || { title: row.title, artist: row.artist, seconds: 0 };
+                old.seconds += Number(row.seconds) || 0; songs.set(k, old);
+                const artist = row.artist || 'Artista'; artists.set(artist, (artists.get(artist) || 0) + (Number(row.seconds) || 0));
+            });
+            const topSong = [...songs.values()].sort((a,b) => b.seconds-a.seconds)[0];
+            const topArtist = [...artists.entries()].sort((a,b) => b[1]-a[1])[0];
+            const periodLabel = wrappedPeriod === 'year' ? `Il tuo ${new Date().getFullYear()}` : new Date().toLocaleDateString('it-IT',{month:'long',year:'numeric'});
+            host.innerHTML = `<div class="wrapped-hero"><div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.12em;font-weight:800">PURPL3 WRAPPED · ${periodLabel}</div><div class="wrapped-number">${Math.floor(seconds/60).toLocaleString('it-IT')} min</div><div style="color:rgba(255,255,255,.75);font-size:.83rem">di musica ascoltata registrata</div></div><div class="wrapped-grid"><div class="wrapped-stat"><div style="font-size:.72rem;color:var(--text-dim)">ARTISTA PIÙ ASCOLTATO</div><strong>${escapeWrappedText(topArtist ? topArtist[0] : '—')}</strong></div><div class="wrapped-stat"><div style="font-size:.72rem;color:var(--text-dim)">BRANO SIMBOLO</div><strong>${escapeWrappedText(topSong ? topSong.title : '—')}</strong><div style="font-size:.75rem;color:var(--text-dim)">${escapeWrappedText(topSong ? topSong.artist : 'Inizia ad ascoltare')}</div></div></div>`;
+        }
+        function escapeWrappedText(value) { return String(value || '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+
+        window.openTrackNotes = function() {
+            const song = currentQueue[currentIndex]; if (!song) return;
+            currentTrackNotesKey = String(song.id);
+            document.getElementById('track-notes-title').textContent = `Note · ${song.title}`;
+            document.getElementById('track-note-input').value = '';
+            if (currentTrackNotesUnsubscribe) { currentTrackNotesUnsubscribe(); currentTrackNotesUnsubscribe = null; }
+            const local = readLocalTrackNotes(currentTrackNotesKey);
+            renderTrackNotes(local);
+            openSheet('track-notes');
+            if (window.subscribeTrackNotes) {
+                currentTrackNotesUnsubscribe = window.subscribeTrackNotes(currentTrackNotesKey, notes => {
+                    const localNotes = readLocalTrackNotes(currentTrackNotesKey);
+                    renderTrackNotes([...localNotes, ...notes].sort((a,b) => Number(b.createdAt || 0) - Number(a.createdAt || 0)));
+                });
+            }
+        };
+        function readLocalTrackNotes(songKey) {
+            try { const all = JSON.parse(localStorage.getItem('purpl3l3an_track_notes_v1') || '{}'); return all[songKey] || []; } catch (_) { return []; }
+        }
+        function renderTrackNotes(notes) {
+            const host = document.getElementById('track-notes-list'); if (!host) return;
+            host.innerHTML = '';
+            if (!notes || !notes.length) { host.innerHTML = '<p style="color:var(--text-dim);font-size:.85rem">Ancora nessuna nota. Sii il primo!</p>'; return; }
+            notes.slice(0,50).forEach(note => {
+                const item = document.createElement('div'); item.className = 'track-note';
+                const meta = document.createElement('div'); meta.className = 'track-note-meta';
+                const who = document.createElement('span'); who.textContent = note.nickname || 'Anonimo';
+                const when = document.createElement('span'); when.textContent = note.createdAt ? new Date(Number(note.createdAt)).toLocaleDateString('it-IT') : '';
+                meta.append(who, when); const body = document.createElement('div'); body.textContent = note.text || '';
+                item.append(meta, body); host.appendChild(item);
+            });
+        }
+        window.submitTrackNote = async function() {
+            const song = currentQueue[currentIndex]; const input = document.getElementById('track-note-input');
+            const value = (input.value || '').trim(); if (!song || !value) { alert('Scrivi prima una nota.'); return; }
+            const user = window.getPurpl3CurrentUser ? window.getPurpl3CurrentUser() : null;
+            if (user && window.publishTrackNoteCloud) {
+                try { await window.publishTrackNoteCloud(String(song.id), value, user.nickname); input.value = ''; }
+                catch (error) { alert('Non riesco a pubblicare la nota condivisa. Verifica le regole Firestore.'); console.error(error); }
+            } else {
+                const all = (() => { try { return JSON.parse(localStorage.getItem('purpl3l3an_track_notes_v1') || '{}'); } catch (_) { return {}; } })();
+                all[String(song.id)] = [{ text: value, nickname: 'Anonimo · questo dispositivo', createdAt: Date.now() }, ...(all[String(song.id)] || [])].slice(0,50);
+                localStorage.setItem('purpl3l3an_track_notes_v1', JSON.stringify(all)); input.value = ''; renderTrackNotes(all[String(song.id)]);
+            }
+        };
+
         function renderTopStats() {
+            renderWrappedSummary();
             const container = document.getElementById('stats-container');
             container.innerHTML = '';
 
@@ -2725,6 +3013,7 @@
             container.textContent = 'Caricamento testo…';
             syncedLyrics = [];
             currentLyricIndex = -1;
+            selectedStoryLyrics.clear();
             openSheet('lyrics');
 
             const cacheKey = `${String(song.artist || '').toLowerCase()}::${String(song.title || '').toLowerCase()}`;
@@ -2821,12 +3110,16 @@
                 if (syncedLyrics.length) return;
             }
             if (data.plainLyrics) {
-                // textContent evita che metadati/testi esterni possano inserire HTML.
                 container.textContent = '';
-                const lyricsText = document.createElement('p');
-                lyricsText.style.whiteSpace = 'pre-line';
-                lyricsText.textContent = data.plainLyrics;
-                container.appendChild(lyricsText);
+                const fragment = document.createDocumentFragment();
+                String(data.plainLyrics).split(/\r?\n/).map(line => line.trim()).filter(Boolean).forEach((text, index) => {
+                    const el = document.createElement('div');
+                    el.className = 'lyric-line'; el.textContent = text;
+                    el.dataset.plainLyricIndex = String(index);
+                    bindLyricLongPress(el, index);
+                    fragment.appendChild(el);
+                });
+                container.appendChild(fragment);
             } else if (data.instrumental) {
                 container.textContent = 'Questo brano risulta strumentale e non ha un testo disponibile.';
             } else {
@@ -2856,6 +3149,7 @@
         function renderSyncedLyricsUI() {
             const container = document.getElementById('lyrics-container');
             container.innerHTML = '';
+            selectedStoryLyrics.clear();
             if (!syncedLyrics.length) {
                 container.textContent = 'Il testo sincronizzato non è disponibile.';
                 return;
@@ -2866,7 +3160,9 @@
                 el.className = 'lyric-line';
                 el.id = `lyric-line-${index}`;
                 el.textContent = line.text;
+                bindLyricLongPress(el, index);
                 el.onclick = () => {
+                    if (lyricLongPressTriggered) return;
                     if (Number.isFinite(audio.duration)) audio.currentTime = Math.min(line.time, audio.duration || line.time);
                 };
                 fragment.appendChild(el);
